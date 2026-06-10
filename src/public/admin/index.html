@@ -1,0 +1,2246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dynamic MCP — Admin</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #131a26;
+      --panel-2: #1a2332;
+      --border: #243047;
+      --text: #e6edf6;
+      --muted: #8b96a9;
+      --accent: #6aa6ff;
+      --accent-2: #4f8ef7;
+      --green: #4ade80;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --orange: #fb923c;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, pre, textarea.mono, input.mono { font-family: var(--mono); }
+    button {
+      cursor: pointer;
+      font: inherit;
+      color: var(--text);
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      transition: border-color .15s, background .15s;
+    }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent-2); border-color: var(--accent-2); color: white; font-weight: 600; }
+    button.primary:hover { background: var(--accent); border-color: var(--accent); }
+    button.danger { background: transparent; border-color: var(--red); color: var(--red); }
+    button.danger:hover { background: rgba(248,113,113,0.1); }
+    button.ghost { background: transparent; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    input, select, textarea {
+      font: inherit;
+      color: var(--text);
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      width: 100%;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 90px; }
+    label { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; }
+    .row > .shrink { flex: 0 0 auto; }
+    .grid { display: grid; gap: 12px; }
+    .grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .grid.cols-3 { grid-template-columns: 2fr 1fr 1fr; }
+
+    header.app {
+      display: flex; align-items: center; gap: 16px;
+      padding: 12px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    header.app .brand { font-weight: 700; font-size: 16px; }
+    header.app .brand .accent { color: var(--accent); }
+    header.app .spacer { flex: 1; }
+    header.app .auth { display: flex; gap: 8px; align-items: center; min-width: 380px; }
+    header.app .auth input { width: 220px; font-family: var(--mono); }
+    header.app .status { font-size: 12px; padding: 3px 8px; border-radius: 99px; border: 1px solid var(--border); }
+    .status.ok { color: var(--green); border-color: var(--green); }
+    .status.bad { color: var(--red); border-color: var(--red); }
+
+    .layout { display: grid; grid-template-columns: 200px 1fr; min-height: calc(100vh - 53px); }
+    nav.side { background: var(--panel); border-right: 1px solid var(--border); padding: 12px 0; }
+    nav.side .nav-item {
+      display: block; padding: 10px 20px; color: var(--muted); cursor: pointer;
+      border-left: 3px solid transparent;
+    }
+    nav.side .nav-item:hover { color: var(--text); }
+    nav.side .nav-item.active { color: var(--text); border-left-color: var(--accent); background: rgba(106,166,255,0.05); }
+    nav.side .nav-item small { display: block; color: var(--muted); font-size: 11px; }
+
+    main { padding: 24px; overflow: hidden; }
+    .page-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .page-head h1 { font-size: 20px; margin: 0; }
+    .page-head .spacer { flex: 1; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .panel + .panel { margin-top: 16px; }
+    .panel h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+    tr:hover td { background: rgba(106,166,255,0.03); }
+    td .actions { display: flex; gap: 6px; }
+    td.code { font-family: var(--mono); font-size: 12px; }
+    td .pill, span.pill {
+      display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px;
+      border: 1px solid var(--border); color: var(--muted);
+    }
+    .pill.active { color: var(--green); border-color: var(--green); }
+    .pill.inactive { color: var(--muted); border-color: var(--muted); }
+    .pill.success { color: var(--green); border-color: var(--green); }
+    .pill.upstream_error { color: var(--orange); border-color: var(--orange); }
+    .pill.timeout { color: var(--yellow); border-color: var(--yellow); }
+    .pill.validation_error { color: var(--yellow); border-color: var(--yellow); }
+    .pill.internal_error { color: var(--red); border-color: var(--red); }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: none; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      width: 720px; max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 64px); overflow: auto;
+    }
+    .modal header {
+      display: flex; align-items: center; padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal header h2 { margin: 0; font-size: 16px; flex: 1; }
+    .modal .body { padding: 18px; }
+    .modal .footer {
+      padding: 14px 18px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+
+    .empty {
+      padding: 40px 20px; text-align: center; color: var(--muted);
+    }
+    .empty strong { display: block; margin-bottom: 4px; color: var(--text); }
+
+    .toast {
+      position: fixed; bottom: 20px; right: 20px;
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px; min-width: 240px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      transform: translateY(20px); opacity: 0; transition: all .2s;
+      z-index: 200;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.ok { border-color: var(--green); }
+    .toast.err { border-color: var(--red); }
+
+    .kbd { font-family: var(--mono); font-size: 11px; padding: 1px 5px; background: var(--panel-2); border-radius: 4px; border: 1px solid var(--border); }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .json-out {
+      font-family: var(--mono); font-size: 12px; white-space: pre;
+      background: #06090f; border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px; max-height: 420px; overflow: auto;
+      color: #cfd8e4;
+    }
+    .pager { display: flex; justify-content: flex-end; gap: 8px; align-items: center; margin-top: 12px; color: var(--muted); }
+    details { margin: 4px 0; }
+    summary { cursor: pointer; color: var(--accent); }
+
+    /* Kebab (3-dot) action menu used in table rows. */
+    .kebab-wrap { position: relative; display: inline-block; }
+    .kebab-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; padding: 0;
+      background: transparent; border: 1px solid transparent; border-radius: 6px;
+      color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer;
+    }
+    .kebab-btn:hover { background: #0b1220; border-color: var(--border); color: var(--text); }
+    .kebab-btn[aria-expanded="true"] { background: #0b1220; border-color: var(--border); color: var(--text); }
+    .kebab-menu {
+      position: absolute; top: calc(100% + 4px); right: 0; z-index: 50;
+      min-width: 168px; padding: 4px;
+      background: #0a111d; border: 1px solid var(--border); border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      display: none;
+    }
+    .kebab-menu.open { display: block; }
+    .kebab-menu button {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 8px 10px; margin: 0;
+      background: transparent; border: 0; border-radius: 5px;
+      color: var(--text); font-size: 13px; text-align: left; cursor: pointer;
+    }
+    .kebab-menu button:hover { background: #11192a; }
+    .kebab-menu button.danger { color: #ff7676; }
+    .kebab-menu button.danger:hover { background: rgba(255, 100, 100, 0.12); }
+    .kebab-menu hr {
+      border: 0; border-top: 1px solid var(--border); margin: 4px 0;
+    }
+    .kebab-icon::before { content: "⋮"; font-weight: 700; }
+
+    /* Styled confirmation dialog (replaces native window.confirm). */
+    .confirm-body { display: flex; gap: 14px; align-items: flex-start; }
+    .confirm-icon {
+      flex-shrink: 0;
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; line-height: 1;
+    }
+    .confirm-icon.warn   { background: rgba(230, 160, 70, 0.15);  color: #e6a046; border: 1px solid rgba(230, 160, 70, 0.35); }
+    .confirm-icon.danger { background: rgba(255, 100, 100, 0.15); color: #ff7676; border: 1px solid rgba(255, 100, 100, 0.35); }
+    .confirm-icon.info   { background: rgba(80, 150, 230, 0.15);  color: #6ea8ee; border: 1px solid rgba(80, 150, 230, 0.35); }
+    .confirm-text { flex: 1; line-height: 1.5; font-size: 14px; color: var(--text); }
+    .confirm-text strong { color: var(--accent); font-weight: 600; }
+    .confirm-text .muted { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); }
+
+    /* Inline checkbox row (opts out of the global uppercase-block label rule). */
+    label.inline-check {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin: 0; padding: 8px 10px;
+      color: var(--text); font-size: 13px;
+      text-transform: none; letter-spacing: 0;
+      background: #0b1220; border: 1px solid var(--border); border-radius: 6px;
+      cursor: pointer; user-select: none;
+    }
+    label.inline-check input[type="checkbox"] {
+      width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer;
+    }
+    label.inline-check code {
+      background: #06090f; border: 1px solid var(--border); border-radius: 4px;
+      padding: 1px 6px; font-family: var(--mono); font-size: 12px; color: var(--accent);
+    }
+
+    /* Card-ish container used inside <details> sections. */
+    .section-card {
+      margin-top: 10px; padding: 12px;
+      background: #0a111d; border: 1px solid var(--border); border-radius: 8px;
+    }
+    .section-card .hint {
+      margin: 8px 0 12px; color: var(--muted); font-size: 12px; line-height: 1.45;
+    }
+
+    /* Tool endpoint helper widgets. */
+    .endpoint-badge {
+      display: inline-block; margin-left: 8px; padding: 1px 8px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+      border-radius: 999px; vertical-align: middle; text-transform: uppercase;
+    }
+    .endpoint-badge.absolute { background: rgba(80, 200, 120, 0.15); color: #5fd28a; border: 1px solid rgba(80, 200, 120, 0.35); }
+    .endpoint-badge.relative { background: rgba(80, 150, 230, 0.15); color: #6ea8ee; border: 1px solid rgba(80, 150, 230, 0.35); }
+    .endpoint-badge.warn     { background: rgba(230, 160, 70, 0.15);  color: #e6a046; border: 1px solid rgba(230, 160, 70, 0.35); }
+
+    .endpoint-preview {
+      margin: 4px 0 8px; padding: 8px 10px;
+      background: #07101a; border: 1px dashed var(--border); border-radius: 6px;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+      word-break: break-all;
+    }
+    .endpoint-preview .label { color: var(--muted); margin-right: 6px; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+    .endpoint-preview .url   { color: #cfd8e4; }
+    .endpoint-preview.error  { border-color: rgba(230, 90, 90, 0.5); color: #e25a5a; }
+  </style>
+</head>
+<body>
+  <header class="app">
+    <div class="brand"><span class="accent">⬢</span> Dynamic MCP <span class="muted">/ admin</span></div>
+    <div class="spacer"></div>
+    <div class="auth">
+      <span class="status" id="status">disconnected</span>
+      <input id="apikey" class="mono" placeholder="x-api-key (admin)" />
+      <button id="saveKey" class="primary">Connect</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="side">
+      <div class="nav-item active" data-view="servers">Servers<small>create &amp; manage</small></div>
+      <div class="nav-item" data-view="tools">Tools<small>per server</small></div>
+      <div class="nav-item" data-view="logs">Logs<small>execution history</small></div>
+    </nav>
+
+    <main id="main"></main>
+  </div>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <header>
+        <h2 id="modalTitle">Modal</h2>
+        <button class="ghost" onclick="closeModal()">✕</button>
+      </header>
+      <div class="body" id="modalBody"></div>
+      <div class="footer" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  // -------------------- State --------------------
+  const state = {
+    apiKey: localStorage.getItem('mcp_admin_key') || '',
+    currentView: 'servers',
+    servers: [],
+    tools: [],
+    selectedServerId: localStorage.getItem('mcp_selected_server') || '',
+    logs: [],
+    logsPage: 1,
+    logsTotal: 0,
+  };
+
+  // -------------------- HTTP --------------------
+  function authHeaders() {
+    if (!state.apiKey) return {};
+    return { 'x-api-key': state.apiKey };
+  }
+
+  async function api(method, path, body) {
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const res = await fetch(path, opts);
+    const ct = res.headers.get('content-type') || '';
+    const data = ct.includes('application/json') ? await res.json() : await res.text();
+    if (!res.ok) {
+      const msg = (data && data.message) || ('HTTP ' + res.status);
+      const err = new Error(msg);
+      err.data = data;
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  async function checkConnection() {
+    try {
+      const data = await api('GET', '/api/v1/admin/servers?limit=1');
+      setStatus(true, `connected (${data.meta?.pagination?.total ?? 0} server(s))`);
+      return true;
+    } catch (e) {
+      setStatus(false, e.status === 401 || e.status === 403 ? 'auth failed' : 'disconnected');
+      return false;
+    }
+  }
+
+  // -------------------- UI helpers --------------------
+  function $(sel, parent = document) { return parent.querySelector(sel); }
+  function $$(sel, parent = document) { return [...parent.querySelectorAll(sel)]; }
+
+  // ----- Kebab (3-dot) action menu -----
+  // Single open at a time; closes on outside click / Escape.
+  window.toggleKebab = function (btn, evt) {
+    evt && evt.stopPropagation();
+    const menu = btn.nextElementSibling;
+    const willOpen = !menu.classList.contains('open');
+    closeKebab();
+    if (willOpen) {
+      menu.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  };
+  window.closeKebab = function () {
+    document.querySelectorAll('.kebab-menu.open').forEach((m) => m.classList.remove('open'));
+    document.querySelectorAll('.kebab-btn[aria-expanded="true"]').forEach((b) =>
+      b.setAttribute('aria-expanded', 'false')
+    );
+  };
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.kebab-wrap')) closeKebab();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeKebab();
+  });
+
+  // Adapt the outbound "Auth credentials (advanced)" block to the selected auth
+  // type. Called from the inline onchange on #f_authType, plus once at modal open
+  // to sync the initial state. Defined at top level so the inline handler can
+  // resolve it regardless of which modal template is currently rendered.
+  window.updateAuthCredFields = function (type) {
+    const details = document.getElementById('f_authCredDetails');
+    const tokenWrap = document.getElementById('f_authTokenWrap');
+    const headerWrap = document.getElementById('f_authHeaderNameWrap');
+    const tokenLabel = document.getElementById('f_authTokenLabel');
+    const tokenInput = document.getElementById('f_auth_token');
+    const headerInput = document.getElementById('f_auth_headerName');
+    if (!details || !tokenWrap || !headerWrap || !tokenLabel) return;
+
+    // Keep the summary visible in every mode — only the inputs change. For
+    // 'none' we collapse + disable so the panel is still discoverable but
+    // signals clearly that no credential is in play.
+    details.style.display = '';
+
+    const setDisabled = (disabled) => {
+      if (tokenInput) {
+        tokenInput.disabled = disabled;
+        tokenInput.placeholder = disabled
+          ? 'No credentials — auth type is "none"'
+          : 'leave blank to keep existing';
+      }
+      if (headerInput) headerInput.disabled = disabled;
+    };
+
+    if (type === 'none') {
+      details.open = false;
+      tokenWrap.style.display = '';
+      headerWrap.style.display = '';
+      tokenLabel.textContent = 'Token';
+      setDisabled(true);
+      return;
+    }
+
+    details.open = true;
+    setDisabled(false);
+
+    if (type === 'bearer') {
+      tokenWrap.style.display = '';
+      headerWrap.style.display = 'none';
+      tokenLabel.textContent = 'Bearer token';
+    } else if (type === 'apiKey') {
+      tokenWrap.style.display = '';
+      headerWrap.style.display = '';
+      tokenLabel.textContent = 'API key value';
+    } else {
+      tokenWrap.style.display = '';
+      headerWrap.style.display = '';
+      tokenLabel.textContent = 'Token';
+    }
+  };
+
+  // Inbound counterpart. The backend stores a single `mcpAccessKey` value and a
+  // header name — "mode" is purely a UI convenience:
+  //   - none  → hide all credentials, save will null out mcpAccessKey
+  //   - token → bearer-style; we lock the header to `authorization`, show only
+  //             the value field, and serverGuards strips the "Bearer " prefix
+  //             on the way in
+  //   - key   → apiKey-style; user picks header name + value
+  // "Tool Auth Type" toggle — only the Header Name input is mode-dependent.
+  // The dropdown itself stays visible because picking 'none' is a real choice
+  // (fall back to Auth credentials inheritance), not the absence of one.
+  window.updateToolAuthFields = function (type) {
+    const wrap = document.getElementById('f_toolAuthHeaderWrap');
+    if (!wrap) return;
+    wrap.style.display = type === 'apiKey' ? '' : 'none';
+  };
+
+  window.updateMcpKeyFields = function (mode) {
+    const valueWrap = document.getElementById('f_mcpAccessKeyWrap');
+    const headerWrap = document.getElementById('f_mcpAccessKeyHeaderWrap');
+    const valueLabel = document.getElementById('f_mcpAccessKeyLabel');
+    const valueInput = document.getElementById('f_mcpAccessKey');
+    const headerInput = document.getElementById('f_mcpAccessKeyHeader');
+    if (!valueWrap || !headerWrap || !valueLabel) return;
+
+    const setDisabled = (disabled) => {
+      if (valueInput) {
+        valueInput.disabled = disabled;
+        valueInput.placeholder = disabled
+          ? 'No credentials — mode is "No Auth"'
+          : 'leave blank to keep existing';
+      }
+      if (headerInput) headerInput.disabled = disabled;
+    };
+
+    if (mode === 'none') {
+      valueWrap.style.display = '';
+      headerWrap.style.display = '';
+      valueLabel.innerHTML = 'Key Value <span class="muted small">(leave blank to keep existing)</span>';
+      setDisabled(true);
+      return;
+    }
+
+    setDisabled(false);
+
+    if (mode === 'token') {
+      valueWrap.style.display = '';
+      headerWrap.style.display = 'none';
+      valueLabel.innerHTML = 'Bearer Token <span class="muted small">(leave blank to keep existing)</span>';
+      // Force the header to "authorization" so the backend reads the right field;
+      // user doesn't see the input but the value is what gets saved.
+      if (headerInput) headerInput.value = 'authorization';
+    } else if (mode === 'key') {
+      valueWrap.style.display = '';
+      headerWrap.style.display = '';
+      valueLabel.innerHTML = 'Key Value <span class="muted small">(leave blank to keep existing)</span>';
+      // If we just switched out of token mode, the header field is still
+      // "authorization" — reset to the default so it doesn't sneak through.
+      if (headerInput && headerInput.value.toLowerCase() === 'authorization') {
+        headerInput.value = 'x-mcp-key';
+      }
+    }
+  };
+  function escapeHTML(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[c]);
+  }
+  // Collapse newlines/runs of whitespace into single spaces, then trim to N
+  // chars + ellipsis. Used for table-cell previews so long LLM-style
+  // descriptions don't break the row layout. Full text stays available via
+  // the cell's title="" tooltip.
+  function clampOneLine(s, max = 140) {
+    if (!s) return '';
+    const flat = String(s).replace(/\s+/g, ' ').trim();
+    return flat.length > max ? flat.slice(0, max - 1).trimEnd() + '…' : flat;
+  }
+  function fmtDate(iso) {
+    if (!iso) return '';
+    try { return new Date(iso).toLocaleString(); } catch (_) { return iso; }
+  }
+  function setStatus(ok, text) {
+    const el = $('#status');
+    el.textContent = text;
+    el.classList.remove('ok', 'bad');
+    el.classList.add(ok ? 'ok' : 'bad');
+  }
+  function toast(msg, kind = 'ok') {
+    const t = $('#toast');
+    t.className = 'toast show ' + kind;
+    t.textContent = msg;
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function openModal(title, bodyHTML, footerHTML) {
+    $('#modalTitle').textContent = title;
+    $('#modalBody').innerHTML = bodyHTML;
+    $('#modalFooter').innerHTML = footerHTML;
+    $('#modal').classList.add('show');
+  }
+  function closeModal() { $('#modal').classList.remove('show'); }
+  window.closeModal = closeModal;
+
+  /**
+   * Promise-based confirmation dialog. Resolves true on confirm, false on cancel.
+   * Usage: if (!(await confirmDialog({ title, message, kind: 'danger' }))) return;
+   *
+   * Options:
+   *   title       — header text (default "Are you sure?")
+   *   message     — body text or HTML (default "")
+   *   detail      — optional secondary line, muted
+   *   confirmText — primary button label (default "Confirm")
+   *   cancelText  — cancel button label (default "Cancel")
+   *   kind        — "danger" | "warn" | "info" (controls icon color + primary button)
+   */
+  function confirmDialog(opts = {}) {
+    const {
+      title       = 'Are you sure?',
+      message     = '',
+      detail      = '',
+      confirmText = 'Confirm',
+      cancelText  = 'Cancel',
+      kind        = 'warn',
+    } = opts;
+    const icon = kind === 'danger' ? '⚠' : kind === 'info' ? 'ℹ' : '⚠';
+    const primaryClass = kind === 'danger' ? 'danger' : 'primary';
+
+    return new Promise((resolve) => {
+      openModal(title, `
+        <div class="confirm-body">
+          <div class="confirm-icon ${kind}">${icon}</div>
+          <div class="confirm-text">
+            ${message}
+            ${detail ? `<span class="muted">${detail}</span>` : ''}
+          </div>
+        </div>
+      `, `
+        <button id="__confirmCancel">${escapeHTML(cancelText)}</button>
+        <button id="__confirmOk" class="${primaryClass}">${escapeHTML(confirmText)}</button>
+      `);
+
+      const ok = () => { cleanup(); resolve(true);  };
+      const no = () => { cleanup(); resolve(false); };
+      function onKey(e) {
+        if (e.key === 'Escape') no();
+        if (e.key === 'Enter')  ok();
+      }
+      function cleanup() {
+        document.removeEventListener('keydown', onKey);
+        closeModal();
+      }
+      $('#__confirmOk').onclick     = ok;
+      $('#__confirmCancel').onclick = no;
+      document.addEventListener('keydown', onKey);
+      setTimeout(() => $('#__confirmOk') && $('#__confirmOk').focus(), 0);
+    });
+  }
+  window.confirmDialog = confirmDialog;
+  function safeJsonParse(s, fallback) {
+    try { return JSON.parse(s); } catch (_) { return fallback; }
+  }
+  function pretty(obj) { try { return JSON.stringify(obj, null, 2); } catch (_) { return String(obj); } }
+
+  // -------------------- Router --------------------
+  function navigate(view) {
+    state.currentView = view;
+    $$('.nav-item').forEach((el) => el.classList.toggle('active', el.dataset.view === view));
+    render();
+  }
+
+  // -------------------- Views --------------------
+  async function render() {
+    const main = $('#main');
+    if (!state.apiKey) {
+      main.innerHTML = `
+        <div class="panel empty">
+          <strong>Welcome to the Dynamic MCP admin</strong>
+          Paste your <span class="kbd">x-api-key</span> in the top-right and click <b>Connect</b>.<br/>
+          Default dev key: <span class="kbd">local-admin-key</span> (matches <code>.env.example</code>).
+        </div>`;
+      return;
+    }
+    if (state.currentView === 'servers')  return renderServers();
+    if (state.currentView === 'tools')    return renderTools();
+    if (state.currentView === 'logs')     return renderLogs();
+  }
+
+  // ----- Servers view -----
+  async function renderServers() {
+    const main = $('#main');
+    main.innerHTML = `
+      <div class="page-head">
+        <h1>MCP Servers</h1>
+        <div class="spacer"></div>
+        <button class="ghost" id="importServerBtn" title="Import a server from a previously exported JSON document — paste, fetch by URL, or load a file">Import</button>
+        <button class="primary" id="newServerBtn">+ New server</button>
+      </div>
+      <div class="panel" id="serversPanel">Loading…</div>`;
+    $('#newServerBtn').onclick = () => editServer(null);
+    $('#importServerBtn').onclick = () => openServerImport();
+
+    try {
+      const res = await api('GET', '/api/v1/admin/servers?limit=100');
+      state.servers = res.data?.items || [];
+      const rows = state.servers.map((s) => `
+        <tr>
+          <td>
+            <strong>${escapeHTML(s.name)}</strong>
+            <div class="small muted">${escapeHTML(s.description || '')}</div>
+          </td>
+          <td class="code">${escapeHTML(s.slug)}</td>
+          <td>${escapeHTML(s.baseUrl || '—')}</td>
+          <td><span class="pill ${s.status}">${s.status}</span></td>
+          <td><span class="pill">${escapeHTML(s.authType || 'none')}</span></td>
+          <td class="small muted">${fmtDate(s.createdAt)}</td>
+          <td>
+            <div class="kebab-wrap">
+              <button class="kebab-btn" aria-haspopup="menu" aria-expanded="false"
+                      onclick="toggleKebab(this, event)" title="Actions">
+                <span class="kebab-icon"></span>
+              </button>
+              <div class="kebab-menu" role="menu">
+                <button role="menuitem" onclick="copyManifestURL('${escapeHTML(s.slug)}');closeKebab()">Manifest URL</button>
+                <button role="menuitem" onclick="viewServerTools('${s._id}');closeKebab()">View tools</button>
+                <button role="menuitem" onclick="editServer('${s._id}');closeKebab()">Edit</button>
+                <button role="menuitem" onclick="duplicateServer('${s._id}','${escapeHTML(s.slug)}');closeKebab()">Duplicate</button>
+                <button role="menuitem" onclick="exportServer('${s._id}','${escapeHTML(s.slug)}');closeKebab()">Export</button>
+                <hr/>
+                <button role="menuitem" class="danger" onclick="deleteServer('${s._id}','${escapeHTML(s.slug)}');closeKebab()">Delete</button>
+              </div>
+            </div>
+          </td>
+        </tr>`).join('');
+      $('#serversPanel').innerHTML = state.servers.length ? `
+        <table>
+          <thead><tr>
+            <th>Name</th><th>Slug</th><th>Base URL</th><th>Status</th><th>Auth</th><th>Created</th><th>Actions</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>` : `<div class="empty">No servers yet. Click <b>+ New server</b> to create one.</div>`;
+    } catch (e) {
+      $('#serversPanel').innerHTML = `<div class="empty">Failed to load: ${escapeHTML(e.message)}</div>`;
+    }
+  }
+
+  window.copyManifestURL = (slug) => {
+    const url = `${location.origin}/${slug}/mcp`;
+    navigator.clipboard?.writeText(url).then(() => toast('Manifest URL copied: ' + url));
+  };
+
+  window.viewServerTools = (id) => {
+    state.selectedServerId = id;
+    localStorage.setItem('mcp_selected_server', id);
+    navigate('tools');
+  };
+
+  window.editServer = async (id) => {
+    let s = null;
+    if (id) {
+      try { s = (await api('GET', '/api/v1/admin/servers/' + id)).data; }
+      catch (e) { return toast(e.message, 'err'); }
+    }
+    const isEdit = !!s;
+    s = s || { name: '', slug: '', description: '', status: 'active', authType: 'none',
+               baseUrl: '', auth: { type: 'none' },
+               mcpIpFilterEnabled: false, mcpAllowedIps: [] };
+
+    openModal(isEdit ? 'Edit server' : 'Create MCP server', `
+      <label>Name</label>
+      <input id="f_name" value="${escapeHTML(s.name)}" placeholder="Cloak Browser MCP" />
+
+      <label>Slug ${isEdit ? '' : '<span class="muted small">(auto-generated if blank)</span>'}</label>
+      <input id="f_slug" class="mono" value="${escapeHTML(s.slug)}" placeholder="cloak-browser-mcp" />
+
+      <label>Description</label>
+      <textarea id="f_desc">${escapeHTML(s.description || '')}</textarea>
+
+      <label>Base URL <span class="muted small">(optional — used when a tool's endpoint is relative)</span></label>
+      <input id="f_baseUrl" class="mono" value="${escapeHTML(s.baseUrl || '')}" placeholder="https://api.example.com" />
+
+      <div class="grid cols-2">
+        <div>
+          <label>Status</label>
+          <select id="f_status">
+            <option value="active" ${s.status==='active'?'selected':''}>active</option>
+            <option value="inactive" ${s.status==='inactive'?'selected':''}>inactive</option>
+          </select>
+        </div>
+        <div>
+          <label>Auth type</label>
+          <select id="f_authType" onchange="updateAuthCredFields(this.value)">
+            ${['none','bearer','apiKey'].map(t => `<option value="${t}" ${s.authType===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <details id="f_authCredDetails">
+        <summary>Auth credentials (advanced)</summary>
+        <div class="grid cols-2" style="margin-top:8px">
+          <div id="f_authTokenWrap">
+            <label id="f_authTokenLabel">Token</label>
+            <input id="f_auth_token" class="mono" placeholder="leave blank to keep existing" />
+          </div>
+          <div id="f_authHeaderNameWrap">
+            <label>Header name <span class="muted small">(apiKey only)</span></label>
+            <input id="f_auth_headerName" class="mono" value="${escapeHTML(s.auth?.headerName || '')}" placeholder="x-api-key" />
+          </div>
+        </div>
+      </details>
+
+      
+
+      <details ${(s.toolAuthType && s.toolAuthType !== 'none') ? 'open' : ''}>
+        <summary>Tool Auth Type (caller pass-through to upstream)</summary>
+        <div style="margin-top:8px">
+          <label>Type <span class="muted small">(forwards the caller's inbound header verbatim to upstream when tools run)</span></label>
+          <select id="f_toolAuthType" onchange="updateToolAuthFields(this.value)">
+            <option value="none" ${(s.toolAuthType || 'none') === 'none' ? 'selected' : ''}>None (use Auth credentials inheritance)</option>
+            <option value="bearer" ${s.toolAuthType === 'bearer' ? 'selected' : ''}>Bearer (forward Authorization: Bearer …)</option>
+            <option value="apiKey" ${s.toolAuthType === 'apiKey' ? 'selected' : ''}>API Key (forward custom header)</option>
+          </select>
+          <div id="f_toolAuthHeaderWrap" style="margin-top:8px">
+            <label>Header Name <span class="muted small">(default: x-api-key)</span></label>
+            <input id="f_toolAuthHeaderName" class="mono" value="${escapeHTML(s.toolAuthHeaderName || 'x-api-key')}" placeholder="x-api-key" />
+          </div>
+        </div>
+      </details>
+
+      <details ${s.mcpIpFilterEnabled ? 'open' : ''}>
+        <summary>MCP IP allowlist (inbound)</summary>
+        <div class="section-card">
+          <label class="inline-check" for="f_mcpIpFilterEnabled">
+            <input type="checkbox" id="f_mcpIpFilterEnabled" ${s.mcpIpFilterEnabled ? 'checked' : ''}
+                   onchange="document.getElementById('f_mcpAllowedIpsWrap').style.display = this.checked ? 'block' : 'none'" />
+            <span>Restrict <code>/${escapeHTML(s.slug || ':slug')}/mcp</code> to allowed IPs</span>
+          </label>
+          <div id="f_mcpAllowedIpsWrap" style="display:${s.mcpIpFilterEnabled ? 'block' : 'none'}">
+            <div class="hint">
+              Applies only to this server's MCP endpoint. If enabled with an empty list, all callers are blocked.
+            </div>
+            <label>Allowed IPs <span class="muted small">(one per line)</span></label>
+            <textarea id="f_mcpAllowedIps" class="mono" rows="4" placeholder="1.2.3.4&#10;5.6.7.8&#10;::1">${escapeHTML((s.mcpAllowedIps || []).join('\n'))}</textarea>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>defaultHeaders (JSON)</summary>
+        <label>defaultHeaders</label>
+        <textarea id="f_defaultHeaders" class="mono">${escapeHTML(pretty(s.defaultHeaders || {}))}</textarea>
+      </details>
+    `, `
+      <button onclick="closeModal()">Cancel</button>
+      <button class="primary" id="saveServerBtn">${isEdit ? 'Save changes' : 'Create server'}</button>
+    `);
+
+    // Initial sync — the inline onchange handles further toggles. We don't trust
+    // the persisted authType blindly: fall back to 'none' if the field went missing.
+    updateAuthCredFields(($('#f_authType') && $('#f_authType').value) || 'none');
+    updateMcpKeyFields(($('#f_mcpKeyMode') && $('#f_mcpKeyMode').value) || 'none');
+    updateToolAuthFields(($('#f_toolAuthType') && $('#f_toolAuthType').value) || 'none');
+
+    $('#saveServerBtn').onclick = async () => {
+      const auth = { type: $('#f_authType').value };
+      const tokenIn = $('#f_auth_token').value.trim();
+      if (tokenIn) auth.token = tokenIn;
+      const headerNameIn = $('#f_auth_headerName').value.trim();
+      if (headerNameIn) auth.headerName = headerNameIn;
+
+      // MCP Access Key (inbound auth) section is optional in the form; if any of
+      // its inputs are missing, just skip those fields in the payload instead of
+      // crashing on `.value` of null.
+      const mcpKeyModeEl = $('#f_mcpKeyMode');
+      const mcpAccessKeyEl = $('#f_mcpAccessKey');
+      const mcpAccessKeyHeaderEl = $('#f_mcpAccessKeyHeader');
+      let mcpAccessKey = undefined;
+      if (mcpKeyModeEl) {
+        const mcpKeyMode = mcpKeyModeEl.value;
+        const mcpKeyIn = mcpAccessKeyEl ? mcpAccessKeyEl.value.trim() : '';
+        if (mcpKeyMode === 'none') mcpAccessKey = null;        // explicitly remove key
+        else if (mcpKeyIn) mcpAccessKey = mcpKeyIn;            // set new key
+      }
+
+      const ipFilterEl = $('#f_mcpIpFilterEnabled');
+      const ipFilterChecked = !!(ipFilterEl && ipFilterEl.checked);
+      const allowedIpsEl = $('#f_mcpAllowedIps');
+
+      const payload = {
+        name: $('#f_name').value.trim(),
+        slug: $('#f_slug').value.trim() || undefined,
+        description: $('#f_desc').value,
+        status: $('#f_status').value,
+        authType: $('#f_authType').value,
+        auth,
+        baseUrl: $('#f_baseUrl').value.trim() || null,
+        defaultHeaders: safeJsonParse($('#f_defaultHeaders').value, {}),
+        ...(mcpAccessKey !== undefined && { mcpAccessKey }),
+        ...(mcpAccessKeyHeaderEl && {
+          mcpAccessKeyHeader: mcpAccessKeyHeaderEl.value.trim() || 'x-mcp-key',
+        }),
+        mcpIpFilterEnabled: ipFilterChecked,
+        mcpAllowedIps: ipFilterChecked && allowedIpsEl
+          ? allowedIpsEl.value.split('\n').map(s => s.trim()).filter(Boolean)
+          : [],
+        toolAuthType: ($('#f_toolAuthType') && $('#f_toolAuthType').value) || 'none',
+        toolAuthHeaderName: $('#f_toolAuthHeaderName')
+          ? ($('#f_toolAuthHeaderName').value.trim() || 'x-api-key')
+          : 'x-api-key',
+      };
+      if (!payload.name) return toast('Name is required', 'err');
+      if (isEdit && payload.slug === s.slug) delete payload.slug;
+
+      try {
+        if (isEdit) await api('PATCH', '/api/v1/admin/servers/' + s._id, payload);
+        else        await api('POST', '/api/v1/admin/servers', payload);
+        closeModal();
+        toast(isEdit ? 'Server updated' : 'Server created');
+        renderServers();
+      } catch (e) { toast(e.message, 'err'); }
+    };
+  };
+
+  window.deleteServer = async (id, slug) => {
+    const ok = await confirmDialog({
+      title: 'Delete MCP server?',
+      message: `You're about to permanently delete <strong>${escapeHTML(slug)}</strong>.`,
+      detail: 'All tools belonging to this server will also be removed. This cannot be undone.',
+      confirmText: 'Delete server',
+      kind: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await api('DELETE', '/api/v1/admin/servers/' + id);
+      toast('Server deleted');
+      renderServers();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+
+  window.exportServer = async (id, slug) => {
+    const includeSecrets = await confirmDialog({
+      title: 'Export this server?',
+      message: `Download <strong>${escapeHTML(slug)}</strong> as a JSON file (server config + all tools).`,
+      detail: 'Click "With secrets" only if you trust where the file is going — raw tokens / passwords / MCP keys will be embedded in plain text.',
+      confirmText: 'Without secrets',
+      cancelText: 'With secrets',
+      kind: 'info',
+    });
+    // confirmDialog resolves: true = "Without secrets" (safe), false = "With secrets"
+    // We invert: includeSecrets when user clicked the cancel-styled "With secrets".
+    const withSecrets = includeSecrets === false;
+
+    try {
+      const url = `/api/v1/admin/servers/${id}/export${withSecrets ? '?includeSecrets=true' : ''}`;
+      const res = await fetch(url, { headers: authHeaders() });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
+      }
+      const blob = await res.blob();
+      // Try to grab the filename from Content-Disposition; fall back to slug.
+      const cd = res.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="([^"]+)"/);
+      const filename = (m && m[1]) || `${slug}.mcp-server.json`;
+      const a = document.createElement('a');
+      const objUrl = URL.createObjectURL(blob);
+      a.href = objUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+      toast(`Exported ${filename}${withSecrets ? ' (with secrets)' : ''}`);
+    } catch (e) {
+      toast('Export failed: ' + e.message, 'err');
+    }
+  };
+
+  // Server import modal. Same shape as openApiImport for tools: paste / fetch /
+  // load file, preview what would be imported, then commit. Preview is fully
+  // client-side — the export payload is already structured, so there's no
+  // backend dry-run round-trip to make.
+  function openServerImport() {
+    openModal('Import server', `
+      <label>Server export JSON <span class="muted small">(paste, fetch, or load a file)</span></label>
+      <textarea id="sv_specText" class="mono" rows="11" placeholder='{"format":"mcp-server-export","server":{...},"tools":[...]}'></textarea>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+        <span class="muted" style="font-size:12px;white-space:nowrap">or load from:</span>
+        <input id="sv_url" style="flex:1" placeholder="https://.../my-server.mcp-server.json" />
+        <button id="sv_fetchBtn">URL</button>
+        <input type="file" id="sv_fileInput" accept="application/json,.json" style="display:none" />
+        <button id="sv_fileBtn">File</button>
+      </div>
+      <div class="grid cols-2" style="margin-top:10px">
+        <div>
+          <label>Override name <span class="muted small">(optional)</span></label>
+          <input id="sv_overrideName" placeholder="leave blank to keep exported name" />
+        </div>
+        <div>
+          <label>Override slug <span class="muted small">(optional — auto -copy on collision)</span></label>
+          <input id="sv_overrideSlug" class="mono" placeholder="leave blank to keep exported slug" />
+        </div>
+      </div>
+      <div id="sv_previewSection" style="margin-top:14px"></div>
+    `, `
+      <button onclick="closeModal()">Cancel</button>
+      <button id="sv_previewBtn">Preview</button>
+      <button class="primary" id="sv_importBtn" disabled>Import server</button>
+    `);
+
+    $('#sv_fetchBtn').onclick = async () => {
+      const url = $('#sv_url').value.trim();
+      if (!url) return toast('Enter a URL first', 'err');
+      $('#sv_fetchBtn').disabled = true;
+      $('#sv_fetchBtn').textContent = '…';
+      try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const text = await r.text();
+        $('#sv_specText').value = text;
+        toast('Spec loaded');
+      } catch (e) {
+        toast('Fetch failed: ' + e.message, 'err');
+      } finally {
+        $('#sv_fetchBtn').disabled = false;
+        $('#sv_fetchBtn').textContent = 'URL';
+      }
+    };
+
+    $('#sv_fileBtn').onclick = () => $('#sv_fileInput').click();
+    $('#sv_fileInput').onchange = async (e) => {
+      const f = e.target.files && e.target.files[0];
+      // Clear so picking the same file twice in a row still fires onchange.
+      e.target.value = '';
+      if (!f) return;
+      try {
+        const text = await f.text();
+        $('#sv_specText').value = text;
+        toast(`Loaded ${f.name}`);
+      } catch (err) {
+        toast('Could not read file: ' + err.message, 'err');
+      }
+    };
+
+    $('#sv_previewBtn').onclick = () => {
+      const text = $('#sv_specText').value.trim();
+      if (!text) return toast('Paste a spec first', 'err');
+      let payload;
+      try { payload = JSON.parse(text); }
+      catch (e) { return toast('Invalid JSON: ' + e.message, 'err'); }
+
+      if (!payload || payload.format !== 'mcp-server-export') {
+        $('#sv_importBtn').disabled = true;
+        return toast('Not a valid MCP server export (missing format marker).', 'err');
+      }
+
+      const srv = payload.server || {};
+      const tools = Array.isArray(payload.tools) ? payload.tools : [];
+      const masked = payload.secretsIncluded === false;
+
+      $('#sv_previewSection').innerHTML = `
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">
+          Server: <code>${escapeHTML(srv.slug || '?')}</code> (${escapeHTML(srv.name || '?')})
+        </div>
+        <div class="muted small" style="margin-bottom:8px">
+          ${tools.length} tool${tools.length === 1 ? '' : 's'} to import — ${masked ? 'secrets MASKED (will need to be re-entered after import)' : 'secrets EMBEDDED (will be imported as-is)'}
+        </div>
+        <div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
+          <table style="margin:0">
+            <thead><tr><th>Tool name</th><th>Method</th><th>Endpoint</th></tr></thead>
+            <tbody>${tools.map((t) => `<tr>
+              <td><strong>${escapeHTML(t.name || '?')}</strong></td>
+              <td><span class="pill">${escapeHTML(t.method || '')}</span></td>
+              <td class="code" style="font-size:11px">${escapeHTML(t.endpoint || '—')}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+      $('#sv_importBtn').disabled = false;
+    };
+
+    $('#sv_importBtn').onclick = async () => {
+      const text = $('#sv_specText').value.trim();
+      let payload;
+      try { payload = JSON.parse(text); }
+      catch (e) { return toast('Invalid JSON: ' + e.message, 'err'); }
+
+      const overrideName = $('#sv_overrideName').value.trim();
+      const overrideSlug = $('#sv_overrideSlug').value.trim();
+      const qs = [];
+      if (overrideName) qs.push('name=' + encodeURIComponent(overrideName));
+      if (overrideSlug) qs.push('slug=' + encodeURIComponent(overrideSlug));
+      const url = '/api/v1/admin/servers/import' + (qs.length ? '?' + qs.join('&') : '');
+
+      $('#sv_importBtn').disabled = true;
+      $('#sv_importBtn').textContent = 'Importing…';
+      try {
+        const r = await api('POST', url, payload);
+        const d = r.data || {};
+        closeModal();
+        let msg = `Imported → ${d.server?.slug} (${d.toolsImported} tool${d.toolsImported === 1 ? '' : 's'}`;
+        if (d.toolsSkipped) msg += `, ${d.toolsSkipped} skipped`;
+        msg += ')';
+        toast(msg);
+        renderServers();
+      } catch (e) {
+        toast('Import failed: ' + e.message, 'err');
+        $('#sv_importBtn').disabled = false;
+        $('#sv_importBtn').textContent = 'Import server';
+      }
+    };
+  }
+  window.openServerImport = openServerImport;
+
+  window.duplicateServer = async (id, slug) => {
+    const ok = await confirmDialog({
+      title: 'Duplicate this server?',
+      message: `A copy of <strong>${escapeHTML(slug)}</strong> will be created.`,
+      detail: 'All tools, auth settings, IP allowlist and access key will be cloned. The new slug is auto-generated.',
+      confirmText: 'Duplicate',
+      kind: 'info',
+    });
+    if (!ok) return;
+    try {
+      const r = await api('POST', '/api/v1/admin/servers/' + id + '/duplicate', {});
+      const d = r.data || {};
+      let msg = `Duplicated → ${d.server?.slug} (${d.toolsCloned} tool${d.toolsCloned===1?'':'s'} cloned`;
+      if (d.toolsSkipped) msg += `, ${d.toolsSkipped} skipped`;
+      msg += ')';
+      toast(msg);
+      renderServers();
+    } catch (e) { toast('Duplicate failed: ' + e.message, 'err'); }
+  };
+
+  // ----- Tools view -----
+  async function renderTools() {
+    const main = $('#main');
+    main.innerHTML = `
+      <div class="page-head">
+        <h1>Tools</h1>
+        <div style="width:300px"><select id="toolServerSel"></select></div>
+        <div class="spacer"></div>
+        <button id="importOaBtn">Import from OpenAPI</button>
+        <button id="exportOaBtn" title="Download the selected server's tools as an OpenAPI 3.0 JSON document">Export OpenAPI</button>
+        <button class="primary" id="newToolBtn">+ New tool</button>
+      </div>
+      <div class="panel" id="toolsPanel">Loading…</div>`;
+
+    try {
+      const sres = await api('GET', '/api/v1/admin/servers?limit=100');
+      state.servers = sres.data?.items || [];
+    } catch (e) { /* keep state.servers */ }
+
+    const sel = $('#toolServerSel');
+    sel.innerHTML = `<option value="">— pick a server —</option>` +
+      state.servers.map((s) => `<option value="${s._id}" ${s._id===state.selectedServerId?'selected':''}>${escapeHTML(s.name)} (${escapeHTML(s.slug)})</option>`).join('');
+    sel.onchange = () => {
+      state.selectedServerId = sel.value;
+      localStorage.setItem('mcp_selected_server', state.selectedServerId);
+      loadToolsForSelected();
+    };
+    $('#newToolBtn').onclick = () => {
+      if (!state.selectedServerId) return toast('Pick a server first', 'err');
+      editTool(null);
+    };
+    $('#importOaBtn').onclick = () => {
+      if (!state.selectedServerId) return toast('Pick a server first', 'err');
+      openApiImport();
+    };
+    $('#exportOaBtn').onclick = () => {
+      if (!state.selectedServerId) return toast('Pick a server first', 'err');
+      exportOpenApi();
+    };
+    if (state.selectedServerId) loadToolsForSelected();
+    else $('#toolsPanel').innerHTML = `<div class="empty">Pick a server above to manage its tools.</div>`;
+  }
+
+  async function loadToolsForSelected() {
+    if (!state.selectedServerId) return;
+    $('#toolsPanel').innerHTML = 'Loading…';
+    try {
+      const res = await api('GET', '/api/v1/admin/tools?limit=100&serverId=' + state.selectedServerId);
+      state.tools = res.data?.items || [];
+      const rows = state.tools.map((t) => `
+        <tr>
+          <td><strong>${escapeHTML(t.name)}</strong><div class="small muted" title="${escapeHTML(t.description || '')}">${escapeHTML(clampOneLine(t.description || '', 140))}</div></td>
+          <td><span class="pill">${t.method}</span></td>
+          <td class="code">${escapeHTML(t.endpoint || (t.executionType === 'echo' ? '(echo)' : '—'))}</td>
+          <td><span class="pill">${t.executionType}</span></td>
+          <td>${t.timeout || '<i class="muted">default</i>'} ms</td>
+          <td><span class="pill ${t.enabled?'active':'inactive'}">${t.enabled ? 'enabled' : 'disabled'}</span></td>
+          <td>
+            <div class="kebab-wrap">
+              <button class="kebab-btn" aria-haspopup="menu" aria-expanded="false"
+                      onclick="toggleKebab(this, event)" title="Actions">
+                <span class="kebab-icon"></span>
+              </button>
+              <div class="kebab-menu" role="menu">
+                <button role="menuitem" onclick="tryTool('${t._id}','${escapeHTML(t.name)}');closeKebab()">Try</button>
+                <button role="menuitem" onclick="editTool('${t._id}');closeKebab()">Edit</button>
+                <button role="menuitem" onclick="toggleTool('${t._id}', ${t.enabled});closeKebab()">${t.enabled ? 'Disable' : 'Enable'}</button>
+                <button role="menuitem" onclick="duplicateTool('${t._id}','${escapeHTML(t.name)}');closeKebab()">Duplicate</button>
+                <button role="menuitem" onclick="exportToolOpenApi('${t._id}');closeKebab()">Copy OpenAPI</button>
+                <hr/>
+                <button role="menuitem" class="danger" onclick="deleteTool('${t._id}','${escapeHTML(t.name)}');closeKebab()">Delete</button>
+              </div>
+            </div>
+          </td>
+        </tr>`).join('');
+      $('#toolsPanel').innerHTML = state.tools.length ? `
+        <table>
+          <thead><tr>
+            <th>Name</th><th>Method</th><th>Endpoint</th><th>Type</th><th>Timeout</th><th>Status</th><th>Actions</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>` : `<div class="empty">No tools on this server yet. Click <b>+ New tool</b>.</div>`;
+    } catch (e) {
+      $('#toolsPanel').innerHTML = `<div class="empty">Failed to load: ${escapeHTML(e.message)}</div>`;
+    }
+  }
+
+  function serverSlug(serverId) {
+    const s = state.servers.find((x) => x._id === serverId);
+    return s ? s.slug : '';
+  }
+
+  window.toggleTool = async (id, enabled) => {
+    try {
+      await api('PATCH', '/api/v1/admin/tools/' + id, { enabled: !enabled });
+      toast(!enabled ? 'Tool enabled' : 'Tool disabled');
+      loadToolsForSelected();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+
+  // NB: this overwrites window.duplicateServer's namespace cousin — distinct
+  // function name `duplicateTool` keeps them isolated. Backend auto-suffixes
+  // the name to `<name>_copy[_N]`, so no prompt is required.
+  window.duplicateTool = async (id, name) => {
+    const ok = await confirmDialog({
+      title: 'Duplicate this tool?',
+      message: `A copy of <strong>${escapeHTML(name)}</strong> will be created on the same server.`,
+      detail: 'Endpoint, method, headers, query params, input schema, auth and timeout settings are cloned. The new name is auto-suffixed (e.g. <code>_copy</code>).',
+      confirmText: 'Duplicate',
+      kind: 'info',
+    });
+    if (!ok) return;
+    try {
+      const r = await api('POST', '/api/v1/admin/tools/' + id + '/duplicate', {});
+      const newName = r.data?.tool?.name || '(unknown)';
+      toast(`Duplicated → ${newName}`);
+      loadToolsForSelected();
+    } catch (e) { toast('Duplicate failed: ' + e.message, 'err'); }
+  };
+
+  // -------------------- Try It --------------------
+  // Build a JSON skeleton from a tool's input schema. Two flavors:
+  //   - "required" → only required props (compact starting point)
+  //   - "full"     → every declared property, so the admin can see all the
+  //                  filter knobs and just delete the ones they don't need.
+  // Defaults are respected; enum picks the first option. Nested objects/arrays
+  // are stubbed (we don't recurse deeply on purpose — keeps output readable).
+  function skeletonFromSchema(schema, mode = 'full') {
+    if (!schema || typeof schema !== 'object') return {};
+    const props = schema.properties || {};
+    const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+    const out = {};
+    for (const [key, def] of Object.entries(props)) {
+      if (!def || typeof def !== 'object') continue;
+      if (mode === 'required' && !required.has(key)) continue;
+      if ('default' in def) { out[key] = def.default; continue; }
+      if (Array.isArray(def.enum) && def.enum.length) { out[key] = def.enum[0]; continue; }
+      switch (def.type) {
+        case 'string':  out[key] = ''; break;
+        case 'number':
+        case 'integer': out[key] = 0; break;
+        case 'boolean': out[key] = false; break;
+        case 'array':   out[key] = []; break;
+        case 'object':  out[key] = {}; break;
+        default:        out[key] = null;
+      }
+    }
+    return out;
+  }
+
+  // One-line summary of each property so the admin can scan the schema while
+  // editing the JSON above. Renders to: "• name (string, required) — desc".
+  function renderSchemaHints(schema) {
+    if (!schema || typeof schema !== 'object') return '';
+    const props = schema.properties || {};
+    const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+    const entries = Object.entries(props);
+    if (!entries.length) return '';
+    const rows = entries.map(([key, def]) => {
+      const t = (def && def.type) || 'any';
+      const req = required.has(key) ? ' <span class="pill inactive">required</span>' : '';
+      const desc = def && def.description ? ` — ${escapeHTML(def.description)}` : '';
+      const enums = Array.isArray(def && def.enum) && def.enum.length
+        ? ` <span class="muted">[${def.enum.map((v) => JSON.stringify(v)).join(', ')}]</span>`
+        : '';
+      return `<div><code>${escapeHTML(key)}</code> <span class="muted small">(${escapeHTML(t)})</span>${req}${enums}${desc}</div>`;
+    }).join('');
+    return `<details style="margin-top:8px"><summary>Available fields (${entries.length})</summary><div class="small" style="padding:6px 0 0 4px;line-height:1.7">${rows}</div></details>`;
+  }
+
+  window.tryTool = async (id, name) => {
+    let t;
+    try { t = (await api('GET', '/api/v1/admin/tools/' + id)).data; }
+    catch (e) { return toast(e.message, 'err'); }
+
+    const server = (state.servers || []).find((s) => s._id === t.serverId)
+      || (state.selectedServerId && state.servers.find((s) => s._id === state.selectedServerId))
+      || null;
+
+    const mode = (server && server.toolAuthType) || 'none';
+    const passthroughActive = mode !== 'none' && t.disableServerToolAuth !== true;
+    const callerHeaderName = mode === 'bearer'
+      ? 'Authorization'
+      : (server && server.toolAuthHeaderName) || 'x-api-key';
+
+    // Default to the full shape so optional filters/params are visible. The
+    // admin can click "Required only" to trim back to the minimum payload.
+    let currentSkeletonMode = 'full';
+    const skeleton = skeletonFromSchema(t.inputSchema, currentSkeletonMode);
+    const hintsHTML = renderSchemaHints(t.inputSchema);
+
+    const authBlock = passthroughActive ? `
+      <div style="margin-top:14px">
+        <label>Caller credential <span class="muted small">(forwarded to upstream as <code>${escapeHTML(callerHeaderName)}</code>)</span></label>
+        <input id="tt_callerCred" class="mono" placeholder="${mode === 'bearer' ? 'Bearer eyJhbGciOi…  (or just the token)' : 'paste the API key'}" />
+        <div class="muted small" style="margin-top:4px">
+          Server <code>${escapeHTML(server ? server.slug : '?')}</code> has tool-auth pass-through <strong>${escapeHTML(mode)}</strong>.
+          Real callers send this on every request; the value is not persisted.
+        </div>
+      </div>
+    ` : (mode !== 'none' ? `
+      <div class="muted small" style="margin-top:14px">
+        Tool-auth pass-through is <strong>${escapeHTML(mode)}</strong> at the server level but this tool has opted out
+        (<code>disableServerToolAuth: true</code>) — no caller credential needed.
+      </div>
+    ` : `
+      <div class="muted small" style="margin-top:14px">
+        No tool-auth pass-through configured on this server. Server-stored credentials (if any) will be used.
+      </div>
+    `);
+
+    openModal('Try: ' + name, `
+      <div class="muted small" style="margin-bottom:8px">
+        <span class="pill">${escapeHTML(t.method || 'POST')}</span>
+        <span class="pill">${escapeHTML(t.executionType || 'http')}</span>
+        <code style="margin-left:6px">${escapeHTML(t.endpoint || '(no endpoint)')}</code>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <label style="margin:0">Input <span class="muted small">(JSON — validated against the tool's inputSchema)</span></label>
+        <div class="small">
+          <button type="button" id="tt_skel_full">All fields</button>
+          <button type="button" id="tt_skel_req">Required only</button>
+        </div>
+      </div>
+      <textarea id="tt_input" class="mono" rows="10">${escapeHTML(pretty(skeleton))}</textarea>
+      ${hintsHTML}
+      ${authBlock}
+      <div id="tt_resultWrap" style="margin-top:14px;display:none">
+        <label>Result</label>
+        <div id="tt_meta" class="small muted" style="margin-bottom:6px"></div>
+        <div id="tt_result" class="json-out"></div>
+      </div>
+    `, `
+      <button onclick="closeModal()">Close</button>
+      <button id="tt_run" class="primary">Run</button>
+    `);
+
+    // Skeleton toggle buttons — overwrite the textarea but only after a confirm
+    // when the admin has clearly edited it, so we don't trash typed-in values.
+    function applySkeleton(nextMode) {
+      const next = pretty(skeletonFromSchema(t.inputSchema, nextMode));
+      const cur = $('#tt_input').value.trim();
+      const looksUntouched = cur === pretty(skeletonFromSchema(t.inputSchema, currentSkeletonMode)).trim();
+      if (!looksUntouched && !confirm('Overwrite your edited input with the new skeleton?')) return;
+      $('#tt_input').value = next;
+      currentSkeletonMode = nextMode;
+    }
+    $('#tt_skel_full').onclick = () => applySkeleton('full');
+    $('#tt_skel_req').onclick  = () => applySkeleton('required');
+
+    $('#tt_run').onclick = async () => {
+      const runBtn = $('#tt_run');
+      const inputEl = $('#tt_input');
+      let input;
+      try {
+        const raw = inputEl.value.trim();
+        input = raw === '' ? {} : JSON.parse(raw);
+      } catch (e) {
+        toast('Input is not valid JSON: ' + e.message, 'err');
+        return;
+      }
+
+      const callerHeaders = {};
+      const credEl = $('#tt_callerCred');
+      if (credEl) {
+        const val = credEl.value.trim();
+        if (val) {
+          if (mode === 'bearer') {
+            callerHeaders.authorization = /^bearer\s/i.test(val) ? val : `Bearer ${val}`;
+          } else if (mode === 'apiKey') {
+            // Express normalizes inbound headers to lowercase keys — match
+            // that so the pass-through lookup hits.
+            callerHeaders[callerHeaderName.toLowerCase()] = val;
+          }
+        }
+      }
+
+      runBtn.disabled = true; runBtn.textContent = 'Running…';
+      try {
+        const r = await api('POST', '/api/v1/admin/tools/' + id + '/try', { input, callerHeaders });
+        const d = r.data || {};
+        const wrap = $('#tt_resultWrap');
+        const meta = $('#tt_meta');
+        const out  = $('#tt_result');
+        wrap.style.display = '';
+        if (d.ok === false) {
+          const e = d.error || {};
+          meta.innerHTML = `<span class="pill inactive">error</span> ${escapeHTML(e.code || '')} ${e.httpStatus ? '(HTTP ' + e.httpStatus + ')' : ''}`;
+          out.textContent = pretty({ message: e.message, details: e.details });
+        } else {
+          const status = d.status || 'success';
+          const cls = status === 'success' ? 'active' : 'inactive';
+          const parts = [`<span class="pill ${cls}">${escapeHTML(status)}</span>`];
+          if (d.statusCode != null) parts.push(`HTTP ${d.statusCode}`);
+          if (d.durationMs != null) parts.push(`${d.durationMs} ms`);
+          if (d.attempts != null) parts.push(`${d.attempts} attempt${d.attempts === 1 ? '' : 's'}`);
+          meta.innerHTML = parts.join(' · ');
+          out.textContent = pretty(d.response);
+        }
+      } catch (e) {
+        const wrap = $('#tt_resultWrap');
+        const meta = $('#tt_meta');
+        const out  = $('#tt_result');
+        wrap.style.display = '';
+        meta.innerHTML = `<span class="pill inactive">request failed</span>`;
+        out.textContent = pretty({ message: e.message, response: e.data });
+      } finally {
+        runBtn.disabled = false; runBtn.textContent = 'Run again';
+      }
+    };
+  };
+
+  window.deleteTool = async (id, name) => {
+    const ok = await confirmDialog({
+      title: 'Delete tool?',
+      message: `You're about to delete <strong>${escapeHTML(name)}</strong>.`,
+      detail: 'Existing execution logs are kept, but the tool will no longer appear in the manifest or be callable.',
+      confirmText: 'Delete tool',
+      kind: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await api('DELETE', '/api/v1/admin/tools/' + id);
+      toast('Tool deleted');
+      loadToolsForSelected();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+
+  const DEFAULT_INPUT_SCHEMA = {
+    type: 'object',
+    properties: {
+      example: { type: 'string', description: 'Replace with your real input fields' }
+    },
+    required: [],
+    additionalProperties: false
+  };
+
+  window.editTool = async (id) => {
+    let t = null;
+    if (id) {
+      try { t = (await api('GET', '/api/v1/admin/tools/' + id)).data; }
+      catch (e) { return toast(e.message, 'err'); }
+    }
+    const isEdit = !!t;
+    t = t || {
+      serverId: state.selectedServerId,
+      name: '', description: '', method: 'POST',
+      endpoint: '', executionType: 'http',
+      headers: {}, queryParams: {},
+      inputSchema: DEFAULT_INPUT_SCHEMA,
+      timeout: null, retries: 0, enabled: true,
+      auth: { type: 'inherit' },
+    };
+
+    // What header (if any) the server's Tool Auth Type will auto-inject. We
+    // visualise it as an entry inside the Headers textarea so the admin can
+    // see, in JSON form, what callers will actually transmit upstream. The
+    // value is a placeholder — the real one comes from the caller at request
+    // time — and we strip the entry on save iff it's still the placeholder.
+    const _toolAuthInjection = (function () {
+      const serverId = t.serverId || state.selectedServerId;
+      const server = (state.servers || []).find((s) => s._id === serverId);
+      if (!server) return null;
+      const mode = server.toolAuthType || 'none';
+      if (mode === 'bearer') return { key: 'Authorization', value: "Bearer <caller's token>" };
+      if (mode === 'apiKey') return { key: server.toolAuthHeaderName || 'x-api-key', value: "<caller's key>" };
+      return null;
+    })();
+
+    // Build the headers object that gets rendered in the textarea. Skip the
+    // auto-inject if:
+    //   - this tool has explicitly opted out (`disableServerToolAuth: true`),
+    //   - or the user already has a header with that key (case-insensitive),
+    // so we never silently overwrite their custom entry.
+    const _displayedHeaders = (function () {
+      const base = { ...(t.headers || {}) };
+      if (!_toolAuthInjection) return base;
+      if (t.disableServerToolAuth === true) return base;
+      const lowerKeys = new Set(Object.keys(base).map((k) => k.toLowerCase()));
+      if (lowerKeys.has(_toolAuthInjection.key.toLowerCase())) return base;
+      return { [_toolAuthInjection.key]: _toolAuthInjection.value, ...base };
+    })();
+
+    openModal(isEdit ? 'Edit tool' : 'Create tool', `
+      <div class="grid cols-2">
+        <div><label>Name</label>
+          <input id="ft_name" class="mono" value="${escapeHTML(t.name)}" placeholder="create_profile" /></div>
+        <div><label>Method</label>
+          <select id="ft_method">
+            ${['GET','POST','PUT','PATCH','DELETE'].map(m=>`<option value="${m}" ${t.method===m?'selected':''}>${m}</option>`).join('')}
+          </select></div>
+      </div>
+
+      <label>Description</label>
+      <textarea id="ft_desc">${escapeHTML(t.description || '')}</textarea>
+
+      <label>Enabled</label>
+      <select id="ft_enabled">
+        <option value="true" ${t.enabled?'selected':''}>true</option>
+        <option value="false" ${!t.enabled?'selected':''}>false</option>
+      </select>
+
+      <label>Endpoint <span id="ft_endpoint_badge" class="endpoint-badge"></span></label>
+      <input id="ft_endpoint" class="mono" value="${escapeHTML(t.endpoint || '')}" placeholder="/profiles/{id}  —or—  https://api.example.com/profiles/{id}" />
+      <div id="ft_endpoint_preview" class="endpoint-preview"></div>
+
+      <div class="grid cols-2">
+        <div><label>Timeout (ms)</label>
+          <input id="ft_timeout" type="number" min="0" value="${t.timeout ?? ''}" placeholder="(default)" /></div>
+        <div><label>Retries</label>
+          <input id="ft_retries" type="number" min="0" max="5" value="${t.retries ?? 0}" /></div>
+      </div>
+
+      <label>Input JSON Schema <button class="ghost shrink" style="float:right;font-size:11px" onclick="formatJsonField('ft_inputSchema')">Format</button></label>
+      <textarea id="ft_inputSchema" class="mono" rows="14">${escapeHTML(pretty(t.inputSchema || DEFAULT_INPUT_SCHEMA))}</textarea>
+
+      <details>
+        <summary>Headers, query params, auth, metadata</summary>
+        <label>Headers (JSON object)</label>
+        <textarea id="ft_headers" class="mono">${escapeHTML(pretty(_displayedHeaders))}</textarea>
+        <div id="ft_toolAuthHeaderPreview" class="hint small muted" style="margin-top:6px"></div>
+        <label>Query params (JSON object)</label>
+        <textarea id="ft_query" class="mono">${escapeHTML(pretty(t.queryParams || {}))}</textarea>
+        <label>Auth override <span class="muted small">(use "inherit" to fall back to the server)</span></label>
+        <select id="ft_authType">
+          ${['inherit','none','bearer','apiKey'].map(a=>`<option value="${a}" ${t.auth?.type===a?'selected':''}>${a}</option>`).join('')}
+        </select>
+        <div class="grid cols-2" style="margin-top:8px">
+          <div><label>Auth token / secretEnvVar override</label>
+            <input id="ft_auth_envvar" class="mono" value="${escapeHTML(t.auth?.secretEnvVar || '')}" placeholder="MY_TOOL_TOKEN" /></div>
+          <div><label>Auth headerName override</label>
+            <input id="ft_auth_headerName" class="mono" value="${escapeHTML(t.auth?.headerName || '')}" placeholder="x-api-key" /></div>
+        </div>
+        <label>Metadata (JSON object)</label>
+        <textarea id="ft_metadata" class="mono">${escapeHTML(pretty(t.metadata || {}))}</textarea>
+      </details>
+    `, `
+      <button onclick="closeModal()">Cancel</button>
+      <button class="primary" id="saveToolBtn">${isEdit ? 'Save changes' : 'Create tool'}</button>
+    `);
+
+    // --- Live endpoint preview (absolute vs relative + resolved URL) ---
+    (function wireEndpointPreview() {
+      const serverId = t.serverId || state.selectedServerId;
+      const server = (state.servers || []).find((s) => s._id === serverId) || {};
+      const baseUrl = (server.baseUrl || '').replace(/\/+$/, '');
+      const slug = server.slug || ':slug';
+      const input = $('#ft_endpoint');
+      const badge = $('#ft_endpoint_badge');
+      const preview = $('#ft_endpoint_preview');
+      const saveBtn = $('#saveToolBtn');
+
+      function setBlocked(reason) {
+        saveBtn.disabled = true;
+        saveBtn.title = reason || '';
+        saveBtn.style.opacity = '0.5';
+        saveBtn.style.cursor = 'not-allowed';
+      }
+      function setOk() {
+        saveBtn.disabled = false;
+        saveBtn.title = '';
+        saveBtn.style.opacity = '';
+        saveBtn.style.cursor = '';
+      }
+
+      function update() {
+        const ep = (input.value || '').trim();
+
+        if (!ep) {
+          badge.className = 'endpoint-badge warn';
+          badge.textContent = 'required';
+          preview.className = 'endpoint-preview';
+          preview.innerHTML = '<span class="label">Resolved URL</span><span class="url muted">(enter an endpoint above)</span>';
+          setBlocked('Endpoint is required for HTTP tools');
+          return;
+        }
+
+        // Discriminator: leading "/" means relative path; otherwise full URL.
+        const isRelative = ep.startsWith('/');
+
+        if (!isRelative) {
+          // Treat as full URL verbatim. We don't enforce a scheme here so the
+          // admin can use whatever upstream actually accepts — but we do warn.
+          const looksLikeUrl = /^https?:\/\//i.test(ep);
+          badge.className = 'endpoint-badge ' + (looksLikeUrl ? 'absolute' : 'warn');
+          badge.textContent = looksLikeUrl ? 'full URL' : 'full URL (no scheme)';
+          preview.className = 'endpoint-preview' + (looksLikeUrl ? '' : ' error');
+          preview.innerHTML = '<span class="label">Resolved URL</span><span class="url">' + escapeHTML(ep) + '</span>' +
+            (looksLikeUrl ? '' : '<div class="hint">No <code>http(s)://</code> scheme — this will likely fail at runtime. Add the scheme or start the endpoint with <code>/</code> to make it relative.</div>');
+          setOk();
+        } else if (!baseUrl) {
+          badge.className = 'endpoint-badge warn';
+          badge.textContent = 'baseUrl required';
+          preview.className = 'endpoint-preview error';
+          preview.innerHTML =
+            'Endpoint starts with <code>/</code> so it\'s treated as a path, but server <code>' + escapeHTML(slug) +
+            '</code> has no <code>baseUrl</code>. Either set <code>baseUrl</code> on the server, ' +
+            'or remove the leading <code>/</code> so the endpoint is treated as a full URL.';
+          setBlocked('Server has no baseUrl — remove the leading "/" to use a full URL, or set baseUrl on the server');
+        } else {
+          badge.className = 'endpoint-badge relative';
+          badge.textContent = 'joined with server.baseUrl';
+          preview.className = 'endpoint-preview';
+          preview.innerHTML = '<span class="label">Resolved URL</span><span class="url">' + escapeHTML(baseUrl) + escapeHTML(ep) + '</span>';
+          setOk();
+        }
+      }
+      input.addEventListener('input', update);
+      update();
+    })();
+
+    // --- Tool Auth Type preview footnote ---
+    // Just a one-liner explaining the auto-injected entry the admin sees in
+    // the textarea above. The actual line lives in the JSON content (built
+    // via _toolAuthInjection / _displayedHeaders) so the JSON they see is
+    // exactly the shape the executor will send.
+    (function showToolAuthPreview() {
+      const preview = document.getElementById('ft_toolAuthHeaderPreview');
+      if (!preview) return;
+      if (!_toolAuthInjection) {
+        preview.innerHTML =
+          "Server <code>Tool Auth Type</code> is <code>None</code> — no auth header is auto-injected here.";
+        return;
+      }
+      preview.innerHTML =
+        `<code>${escapeHTML(_toolAuthInjection.key)}</code> above is auto-injected by the server's ` +
+        `<code>Tool Auth Type</code>. The placeholder value <code>${escapeHTML(_toolAuthInjection.value)}</code> ` +
+        `is just a marker — at runtime the real value comes from the caller's inbound request. ` +
+        `<strong>Per-tool opt-out:</strong> delete this line and save to skip the pass-through for ` +
+        `this one tool (e.g. for a public API). Keep the line to forward the caller's credential.`;
+    })();
+
+    $('#saveToolBtn').onclick = async () => {
+      const inputSchema = safeJsonParse($('#ft_inputSchema').value, null);
+      if (!inputSchema || typeof inputSchema !== 'object') {
+        return toast('Input schema must be a JSON object', 'err');
+      }
+      const auth = { type: $('#ft_authType').value };
+      const envv = $('#ft_auth_envvar').value.trim();
+      if (envv) auth.secretEnvVar = envv;
+      const hn = $('#ft_auth_headerName').value.trim();
+      if (hn) auth.headerName = hn;
+
+      // Headers + per-tool pass-through opt-out:
+      //  - If the server has a Tool Auth Type configured, presence of the
+      //    matching key in the saved JSON means "yes, keep pass-through for
+      //    this tool"; absence means "opt this tool out".
+      //  - The placeholder value is purely for display; strip it on save so
+      //    we never persist sentinel strings as if they were static headers.
+      //  - If the user typed a real value over the placeholder, we still
+      //    persist it (their explicit choice), but the runtime pass-through
+      //    will overwrite it on every call.
+      const rawHeaders = safeJsonParse($('#ft_headers').value, {});
+      let disableServerToolAuth = false;
+      if (_toolAuthInjection) {
+        let saw = false;
+        for (const k of Object.keys(rawHeaders)) {
+          if (k.toLowerCase() === _toolAuthInjection.key.toLowerCase()) {
+            saw = true;
+            if (rawHeaders[k] === _toolAuthInjection.value) delete rawHeaders[k];
+          }
+        }
+        disableServerToolAuth = !saw;
+      }
+
+      const payload = {
+        name: $('#ft_name').value.trim(),
+        description: $('#ft_desc').value,
+        method: $('#ft_method').value,
+        executionType: 'http',
+        endpoint: $('#ft_endpoint').value.trim() || null,
+        timeout: $('#ft_timeout').value === '' ? null : Number($('#ft_timeout').value),
+        retries: Number($('#ft_retries').value) || 0,
+        enabled: $('#ft_enabled').value === 'true',
+        inputSchema,
+        headers: rawHeaders,
+        queryParams: safeJsonParse($('#ft_query').value, {}),
+        auth,
+        ...(_toolAuthInjection ? { disableServerToolAuth } : {}),
+        metadata: safeJsonParse($('#ft_metadata').value, {}),
+      };
+
+      if (!payload.name) return toast('Name is required', 'err');
+
+      try {
+        if (isEdit) {
+          await api('PATCH', '/api/v1/admin/tools/' + t._id, payload);
+        } else {
+          payload.serverId = state.selectedServerId;
+          await api('POST', '/api/v1/admin/tools', payload);
+        }
+        closeModal();
+        toast(isEdit ? 'Tool updated' : 'Tool created');
+        loadToolsForSelected();
+      } catch (e) { toast(e.message, 'err'); }
+    };
+  };
+
+  // Build an OpenAPI 3.0 document from the given server + tool list. Mirrors
+  // the inverse of `parseOpenApi` on the backend so a roundtrip (export → import)
+  // recovers the same tools.
+  function buildOpenApiSpec(server, tools) {
+    const spec = {
+      openapi: '3.0.3',
+      info: {
+        title: server.name || 'MCP Server',
+        description: server.description || '',
+        version: server.version || '1.0.0',
+      },
+      servers: server.baseUrl ? [{ url: server.baseUrl }] : [],
+      paths: {},
+    };
+
+    // Server-level outbound auth → securitySchemes. We include both the
+    // admin-stored Auth credentials AND the pass-through Tool Auth Type so
+    // downstream tooling knows what headers an upstream call carries.
+    const securitySchemes = {};
+    const security = [];
+    if (server.auth && server.auth.type === 'bearer') {
+      securitySchemes.bearerAuth = { type: 'http', scheme: 'bearer' };
+      security.push({ bearerAuth: [] });
+    } else if (server.auth && server.auth.type === 'apiKey') {
+      securitySchemes.apiKeyAuth = {
+        type: 'apiKey', in: 'header',
+        name: server.auth.headerName || 'x-api-key',
+      };
+      security.push({ apiKeyAuth: [] });
+    }
+    if (server.toolAuthType === 'bearer') {
+      securitySchemes.callerBearer = { type: 'http', scheme: 'bearer', description: 'Caller pass-through token forwarded to upstream.' };
+      security.push({ callerBearer: [] });
+    } else if (server.toolAuthType === 'apiKey') {
+      securitySchemes.callerApiKey = {
+        type: 'apiKey', in: 'header',
+        name: server.toolAuthHeaderName || 'x-api-key',
+        description: 'Caller pass-through API key forwarded to upstream.',
+      };
+      security.push({ callerApiKey: [] });
+    }
+    if (Object.keys(securitySchemes).length) {
+      spec.components = { securitySchemes };
+      spec.security = security;
+    }
+
+    for (const t of tools) {
+      if (!t.endpoint) continue; // skip echo / no-endpoint tools
+      // Tool endpoints may be absolute URLs — keep only the path portion so the
+      // spec stays anchored on `servers[0].url`. Absolute URLs pointing at hosts
+      // OTHER than server.baseUrl will lose their host on export; that's the
+      // tradeoff of putting everything under one OpenAPI document.
+      let pathOnly = t.endpoint;
+      try {
+        if (/^https?:\/\//i.test(pathOnly)) {
+          const u = new URL(pathOnly);
+          pathOnly = u.pathname + (u.search || '');
+        }
+      } catch (_) { /* keep raw */ }
+
+      // Path templating tokens `{name}` become path parameters.
+      const pathParamNames = new Set();
+      pathOnly.replace(/\{([a-zA-Z0-9_]+)\}/g, (_m, name) => {
+        pathParamNames.add(name);
+        return _m;
+      });
+
+      const inSchema = (t.inputSchema && typeof t.inputSchema === 'object')
+        ? t.inputSchema
+        : { type: 'object', properties: {} };
+      const requiredSet = new Set(Array.isArray(inSchema.required) ? inSchema.required : []);
+      const properties = inSchema.properties || {};
+
+      const method = (t.method || 'POST').toLowerCase();
+      const isBodyMethod = method === 'post' || method === 'put' || method === 'patch';
+
+      const parameters = [];
+      const bodyProps = {};
+      const bodyRequired = [];
+
+      for (const [name, sch] of Object.entries(properties)) {
+        const paramSchema = sch && typeof sch === 'object' ? sch : { type: 'string' };
+        if (pathParamNames.has(name)) {
+          const p = { name, in: 'path', required: true, schema: paramSchema };
+          if (paramSchema.description) p.description = paramSchema.description;
+          parameters.push(p);
+        } else if (!isBodyMethod) {
+          const p = { name, in: 'query', required: requiredSet.has(name), schema: paramSchema };
+          if (paramSchema.description) p.description = paramSchema.description;
+          parameters.push(p);
+        } else {
+          bodyProps[name] = paramSchema;
+          if (requiredSet.has(name)) bodyRequired.push(name);
+        }
+      }
+
+      const op = {
+        operationId: t.name,
+        summary: t.description || t.name,
+      };
+      if (parameters.length) op.parameters = parameters;
+      if (isBodyMethod && Object.keys(bodyProps).length) {
+        const bodySchema = { type: 'object', properties: bodyProps };
+        if (bodyRequired.length) bodySchema.required = bodyRequired;
+        op.requestBody = {
+          required: bodyRequired.length > 0,
+          content: { 'application/json': { schema: bodySchema } },
+        };
+      }
+      op.responses = { '200': { description: 'OK' } };
+      if (t.enabled === false) op['x-mcp-enabled'] = false;
+      if (t.disableServerToolAuth === true) op['x-mcp-disable-server-auth'] = true;
+
+      if (!spec.paths[pathOnly]) spec.paths[pathOnly] = {};
+      spec.paths[pathOnly][method] = op;
+    }
+
+    return spec;
+  }
+
+  async function exportOpenApi() {
+    const server = (state.servers || []).find((s) => s._id === state.selectedServerId);
+    if (!server) return toast('Selected server not found', 'err');
+    if (!Array.isArray(state.tools) || state.tools.length === 0) {
+      return toast('No tools to export', 'err');
+    }
+    try {
+      const spec = buildOpenApiSpec(server, state.tools);
+      const json = JSON.stringify(spec, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const filename = `${server.slug || 'mcp-server'}.openapi.json`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast(`Exported ${state.tools.length} tool${state.tools.length === 1 ? '' : 's'} to ${filename}`);
+    } catch (e) {
+      toast('Export failed: ' + e.message, 'err');
+    }
+  }
+  window.exportOpenApi = exportOpenApi;
+
+  // Per-tool OpenAPI copy. Reuses buildOpenApiSpec so the document shape and
+  // path/body/security handling stay identical to the all-tools export — the
+  // only difference is a one-element tools array. Copies to clipboard so the
+  // admin can paste the snippet into another server's Import-from-OpenAPI
+  // dialog (or into an LLM prompt) without juggling files.
+  async function exportToolOpenApi(toolId) {
+    const server = (state.servers || []).find((s) => s._id === state.selectedServerId);
+    if (!server) return toast('Selected server not found', 'err');
+    const tool = (state.tools || []).find((t) => t._id === toolId);
+    if (!tool) return toast('Tool not found', 'err');
+    try {
+      const spec = buildOpenApiSpec(server, [tool]);
+      const json = JSON.stringify(spec, null, 2);
+      await navigator.clipboard.writeText(json);
+      toast(`Copied OpenAPI for ${tool.name} to clipboard`);
+    } catch (e) {
+      toast('Copy failed: ' + e.message, 'err');
+    }
+  }
+  window.exportToolOpenApi = exportToolOpenApi;
+
+  function openApiImport() {
+    openModal('Import from OpenAPI', `
+      <label>OpenAPI / Swagger spec <span class="muted small">(paste JSON)</span></label>
+      <textarea id="oa_specText" class="mono" rows="11" placeholder='{"openapi":"3.0.0","info":{"title":"My API","version":"1.0.0"},"paths":{"/items":{"get":{"operationId":"listItems","summary":"List items","responses":{}}}}}'></textarea>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+        <span class="muted" style="font-size:12px;white-space:nowrap">or load from URL:</span>
+        <input id="oa_url" style="flex:1" placeholder="https://petstore3.swagger.io/api/v3/openapi.json" />
+        <button id="oa_fetchBtn">Fetch</button>
+      </div>
+      <div id="oa_previewSection" style="margin-top:14px"></div>
+    `, `
+      <button onclick="closeModal()">Cancel</button>
+      <button id="oa_previewBtn">Preview tools</button>
+      <button class="primary" id="oa_importBtn" disabled>Import all</button>
+    `);
+
+    $('#oa_fetchBtn').onclick = async () => {
+      const url = $('#oa_url').value.trim();
+      if (!url) return toast('Enter a URL first', 'err');
+      $('#oa_fetchBtn').disabled = true;
+      $('#oa_fetchBtn').textContent = 'Fetching…';
+      try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const text = await r.text();
+        $('#oa_specText').value = text;
+        toast('Spec loaded');
+      } catch (e) {
+        toast('Fetch failed: ' + e.message, 'err');
+      } finally {
+        $('#oa_fetchBtn').disabled = false;
+        $('#oa_fetchBtn').textContent = 'Fetch';
+      }
+    };
+
+    $('#oa_previewBtn').onclick = async () => {
+      const text = $('#oa_specText').value.trim();
+      if (!text) return toast('Paste a spec first', 'err');
+      let spec;
+      try { spec = JSON.parse(text); }
+      catch (e) { return toast('Invalid JSON: ' + e.message, 'err'); }
+
+      $('#oa_previewBtn').disabled = true;
+      $('#oa_previewBtn').textContent = 'Parsing…';
+      try {
+        const res = await api('POST', '/api/v1/admin/tools/import/openapi', {
+          serverId: state.selectedServerId,
+          spec,
+          dryRun: true,
+        });
+        const tools = res.data?.tools || [];
+        if (tools.length === 0) {
+          $('#oa_previewSection').innerHTML = '<div class="empty">No operations found in the spec.</div>';
+          return;
+        }
+        $('#oa_previewSection').innerHTML = `
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px">${tools.length} operation(s) found — review before importing:</div>
+          <div style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:6px">
+            <table style="margin:0">
+              <thead><tr><th>Tool name</th><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+              <tbody>${tools.map((t) => `<tr>
+                <td><strong>${escapeHTML(t.name)}</strong></td>
+                <td><span class="pill">${escapeHTML(t.method)}</span></td>
+                <td class="code" style="font-size:11px">${escapeHTML(t.endpoint)}</td>
+                <td class="muted" style="font-size:11px">${escapeHTML((t.description || '').slice(0, 60))}</td>
+              </tr>`).join('')}</tbody>
+            </table>
+          </div>`;
+        $('#oa_importBtn').disabled = false;
+      } catch (e) {
+        toast(e.message, 'err');
+      } finally {
+        $('#oa_previewBtn').disabled = false;
+        $('#oa_previewBtn').textContent = 'Preview tools';
+      }
+    };
+
+    $('#oa_importBtn').onclick = async () => {
+      const text = $('#oa_specText').value.trim();
+      let spec;
+      try { spec = JSON.parse(text); }
+      catch (e) { return toast('Invalid JSON: ' + e.message, 'err'); }
+
+      $('#oa_importBtn').disabled = true;
+      $('#oa_importBtn').textContent = 'Importing…';
+      try {
+        const res = await api('POST', '/api/v1/admin/tools/import/openapi', {
+          serverId: state.selectedServerId,
+          spec,
+          dryRun: false,
+        });
+        const d = res.data;
+        closeModal();
+        toast(`Imported: ${d.created?.length || 0} created, ${d.skipped?.length || 0} skipped, ${d.errors?.length || 0} errors`);
+        loadToolsForSelected();
+      } catch (e) {
+        toast(e.message, 'err');
+        $('#oa_importBtn').disabled = false;
+        $('#oa_importBtn').textContent = 'Import all';
+      }
+    };
+  }
+
+  window.formatJsonField = (id) => {
+    const el = $('#' + id);
+    const parsed = safeJsonParse(el.value, null);
+    if (parsed === null) return toast('Not valid JSON', 'err');
+    el.value = pretty(parsed);
+  };
+
+  // ----- Try It view -----
+  // ----- Logs view -----
+  async function renderLogs() {
+    const main = $('#main');
+    main.innerHTML = `
+      <div class="page-head"><h1>Execution logs</h1></div>
+      <div class="panel">
+        <div class="row">
+          <div>
+            <label>Server</label>
+            <select id="lgServer"><option value="">all</option></select>
+          </div>
+          <div>
+            <label>Tool</label>
+            <input id="lgTool" type="search" list="lgToolList" placeholder="Type to search — leave blank for all" autocomplete="off" />
+            <datalist id="lgToolList"></datalist>
+          </div>
+          <div>
+            <label>Status</label>
+            <select id="lgStatus">
+              <option value="">all</option>
+              ${['success','validation_error','upstream_error','timeout','internal_error'].map(s=>`<option value="${s}">${s}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label>Limit</label>
+            <input id="lgLimit" type="number" value="20" min="1" max="100" />
+          </div>
+          <div class="shrink" style="align-self:flex-end">
+            <button class="primary" id="lgGo">Refresh</button>
+          </div>
+          <div class="shrink" style="align-self:flex-end">
+            <button id="lgExport" title="Download all logs matching the current Server/Tool/Status filter as JSON (capped at 1000 rows)">Export</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="logsPanel">Loading…</div>`;
+
+    if (!state.servers.length) {
+      try { state.servers = (await api('GET','/api/v1/admin/servers?limit=100')).data?.items || []; }
+      catch (_) {}
+    }
+    // Cache all tools across all servers once per Logs visit so the Tool
+    // dropdown can react to the Server filter without an extra API call.
+    try { state.allTools = (await api('GET','/api/v1/admin/tools?limit=100')).data?.items || []; }
+    catch (_) { state.allTools = state.allTools || []; }
+
+    $('#lgServer').innerHTML = `<option value="">all</option>` +
+      state.servers.map((s) => `<option value="${s._id}">${escapeHTML(s.name)}</option>`).join('');
+
+    // Build a {serverId → slug} lookup so the "all servers" Tool listing can
+    // disambiguate same-named tools by prefixing the server slug.
+    const slugById = Object.fromEntries(state.servers.map((s) => [s._id, s.slug]));
+
+    // Datalist-driven typeahead. The user types into a text input and the
+    // browser filters the suggestion list. We maintain a {label → toolId} map
+    // on state so loadLogs/exportLogs can resolve the typed label back to a
+    // real ObjectId. An exact match resolves to an id; anything else (partial
+    // typing, no match, empty) resolves to '' = "all tools".
+    const renderToolOptions = (serverId) => {
+      const tools = (state.allTools || []).filter((t) => !serverId || String(t.serverId) === String(serverId));
+      tools.sort((a, b) => a.name.localeCompare(b.name));
+      const map = {};
+      const opts = tools.map((t) => {
+        const label = serverId
+          ? t.name
+          : `${slugById[t.serverId] || '?'} / ${t.name}`;
+        map[label] = t._id;
+        return `<option value="${escapeHTML(label)}"></option>`;
+      }).join('');
+      $('#lgToolList').innerHTML = opts;
+      state.lgToolLabelToId = map;
+    };
+    renderToolOptions('');
+
+    $('#lgGo').onclick = () => { state.logsPage = 1; loadLogs(); };
+    $('#lgExport').onclick = exportLogs;
+
+    // Auto-apply on filter change. Without this the dropdowns look reactive but
+    // require clicking Refresh — easy to miss and the previous result set stays
+    // on screen, making it look like the filter didn't work. Also reset page
+    // to 1 on filter change so a stale page index can't yield an empty result
+    // against the new filter.
+    const resetAndLoad = () => { state.logsPage = 1; loadLogs(); };
+    $('#lgServer').onchange = () => {
+      // Repopulate suggestions for the new Server scope and clear any prior
+      // tool text — a tool from server A no longer makes sense under server B.
+      renderToolOptions($('#lgServer').value);
+      $('#lgTool').value = '';
+      resetAndLoad();
+    };
+    // Datalist picks fire 'input' (not always 'change'), so listen to input and
+    // only reload when the typed value resolves to a real tool OR is empty.
+    // This avoids hammering the API on every keystroke of a partial match.
+    let toolDebounce;
+    $('#lgTool').oninput = () => {
+      clearTimeout(toolDebounce);
+      const v = $('#lgTool').value.trim();
+      const resolved = !v || state.lgToolLabelToId[v];
+      // Empty → reload immediately (clear filter). Resolved match → small
+      // debounce so click-pick from the suggestion list still feels instant.
+      // Partial / no-match → skip reload; user is still typing.
+      if (!v) { resetAndLoad(); return; }
+      if (resolved) toolDebounce = setTimeout(resetAndLoad, 150);
+    };
+    $('#lgStatus').onchange = resetAndLoad;
+    $('#lgLimit').onchange  = resetAndLoad;
+
+    loadLogs();
+  }
+
+  async function loadLogs() {
+    const qs = new URLSearchParams();
+    qs.set('limit', $('#lgLimit')?.value || '20');
+    qs.set('page', String(state.logsPage));
+    if ($('#lgServer')?.value) qs.set('serverId', $('#lgServer').value);
+    // Tool filter is a typeahead input — resolve the typed label to a real
+    // ObjectId via the map populated when suggestions were built. Anything
+    // that doesn't match a known tool is treated as "all tools" so the user
+    // isn't punished for partial typing.
+    const toolLabel = ($('#lgTool')?.value || '').trim();
+    const toolId = toolLabel && state.lgToolLabelToId ? state.lgToolLabelToId[toolLabel] : '';
+    if (toolId) qs.set('toolId', toolId);
+    if ($('#lgStatus')?.value) qs.set('status', $('#lgStatus').value);
+    try {
+      const res = await api('GET', '/api/v1/admin/logs?' + qs.toString());
+      const items = res.data?.items || [];
+      state.logsTotal = res.meta?.pagination?.total || 0;
+      const rows = items.map((l) => `
+        <tr>
+          <td class="small muted">${fmtDate(l.createdAt)}</td>
+          <td class="code">${escapeHTML(l.serverSlug)} / ${escapeHTML(l.toolName)}</td>
+          <td><span class="pill ${l.status}">${l.status}</span></td>
+          <td>${l.response?.status ?? '<span class="muted">—</span>'}</td>
+          <td>${l.durationMs} ms</td>
+          <td>${l.attempts}</td>
+          <td><button onclick='viewLog(${JSON.stringify(l._id)})'>Inspect</button></td>
+        </tr>`).join('');
+      $('#logsPanel').innerHTML = items.length ? `
+        <table>
+          <thead><tr><th>When</th><th>Server / Tool</th><th>Status</th><th>HTTP</th><th>Duration</th><th>Attempts</th><th>Actions</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="pager">
+          <span class="small">Page ${state.logsPage} • ${state.logsTotal} total</span>
+          <button ${state.logsPage<=1?'disabled':''} onclick="state.logsPage--; loadLogs()">‹ Prev</button>
+          <button onclick="state.logsPage++; loadLogs()">Next ›</button>
+        </div>` : `<div class="empty">No logs yet — run a tool from the Try It tab.</div>`;
+    } catch (e) {
+      $('#logsPanel').innerHTML = `<div class="empty">Failed: ${escapeHTML(e.message)}</div>`;
+    }
+  }
+  window.loadLogs = loadLogs;
+
+  // Export logs matching the current Server/Status filters. We deliberately
+  // ignore the on-screen Limit (and the listLogs default cap of 100 per page)
+  // and walk pages up to MAX_EXPORT rows so the file represents the filter,
+  // not the current view.
+  async function exportLogs() {
+    const MAX_EXPORT = 1000;
+    const PAGE_SIZE = 100; // backend caps limit at 100 per page
+    const btn = $('#lgExport');
+    const prevText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Exporting…';
+
+    try {
+      const baseQs = new URLSearchParams();
+      baseQs.set('limit', String(PAGE_SIZE));
+      if ($('#lgServer')?.value) baseQs.set('serverId', $('#lgServer').value);
+      const exportToolLabel = ($('#lgTool')?.value || '').trim();
+      const exportToolId = exportToolLabel && state.lgToolLabelToId ? state.lgToolLabelToId[exportToolLabel] : '';
+      if (exportToolId) baseQs.set('toolId', exportToolId);
+      if ($('#lgStatus')?.value) baseQs.set('status', $('#lgStatus').value);
+
+      const all = [];
+      let page = 1;
+      let total = 0;
+      while (all.length < MAX_EXPORT) {
+        const qs = new URLSearchParams(baseQs);
+        qs.set('page', String(page));
+        const res = await api('GET', '/api/v1/admin/logs?' + qs.toString());
+        const items = res.data?.items || [];
+        total = res.meta?.pagination?.total ?? total;
+        all.push(...items);
+        if (items.length < PAGE_SIZE) break;     // last page
+        if (all.length >= total) break;          // got everything
+        page += 1;
+      }
+
+      const truncated = all.length < total;
+      const exported = {
+        format: 'mcp-execution-logs-export',
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        filter: {
+          serverId: $('#lgServer')?.value || null,
+          toolId:   exportToolId || null,
+          status:   $('#lgStatus')?.value || null,
+        },
+        totalMatching: total,
+        rowsExported: all.length,
+        truncated,
+        cap: MAX_EXPORT,
+        items: all.slice(0, MAX_EXPORT),
+      };
+
+      const json = JSON.stringify(exported, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const serverPart = $('#lgServer')?.selectedOptions[0]?.text;
+      const slugPart = serverPart && serverPart !== 'all' ? `-${serverPart.replace(/\s+/g, '_')}` : '';
+      const filename = `mcp-logs${slugPart}-${stamp}.json`;
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      toast(`Exported ${all.length} log${all.length === 1 ? '' : 's'}${truncated ? ` (capped at ${MAX_EXPORT}; ${total} total match the filter)` : ''}`);
+    } catch (e) {
+      toast('Export failed: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prevText;
+    }
+  }
+  window.exportLogs = exportLogs;
+
+  window.viewLog = async (id) => {
+    try {
+      const r = await api('GET', '/api/v1/admin/logs/' + id);
+      const json = pretty(r.data);
+      openModal(
+        'Execution log',
+        `<div class="json-out" id="logJsonBody">${escapeHTML(json)}</div>`,
+        `<button id="logCopyBtn">Copy JSON</button>
+         <button class="primary" onclick="closeModal()">Close</button>`
+      );
+
+      // Stash the unescaped JSON on the button so the click handler can pull
+      // it back out without re-parsing the rendered HTML. window.* would leak
+      // across modal opens; dataset is bound to this DOM element only.
+      const btn = $('#logCopyBtn');
+      btn.dataset.payload = json;
+      btn.onclick = async () => {
+        const text = btn.dataset.payload || '';
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            // Fallback for http:// (no Clipboard API). Hidden textarea + execCommand
+            // still works on every modern browser when not on https.
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          const prev = btn.textContent;
+          btn.textContent = 'Copied ✓';
+          btn.disabled = true;
+          setTimeout(() => { btn.textContent = prev; btn.disabled = false; }, 1400);
+        } catch (e) {
+          toast('Copy failed: ' + e.message, 'err');
+        }
+      };
+    } catch (e) { toast(e.message, 'err'); }
+  };
+
+  // -------------------- Wire up --------------------
+  document.addEventListener('DOMContentLoaded', async () => {
+    $('#apikey').value = state.apiKey;
+    $('#saveKey').onclick = async () => {
+      state.apiKey = $('#apikey').value.trim();
+      localStorage.setItem('mcp_admin_key', state.apiKey);
+      const ok = await checkConnection();
+      if (ok) { toast('Connected'); render(); }
+      else    toast('Could not authenticate', 'err');
+    };
+    $$('.nav-item').forEach((el) => el.onclick = () => navigate(el.dataset.view));
+
+    if (state.apiKey) {
+      const ok = await checkConnection();
+      if (!ok) toast('Saved key is invalid — please re-enter', 'err');
+    } else {
+      setStatus(false, 'no api key');
+    }
+    render();
+  });
+  </script>
+</body>
+</html>

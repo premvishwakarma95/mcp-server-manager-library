@@ -1,0 +1,162 @@
+Freelancer Proposal Writer
+
+
+# Freelancer Proposal Writer
+
+## Purpose
+Write the `description` text for a single Freelancer bid. Called by
+the "Freelancer Bidding (Core + Search)" skill at STEP 5d, right
+before `place_bid`. Returns plain text suitable for the bid field.
+
+## Input (provided in caller's context)
+- `P_full`      — full project record from `get_project_details`
+- `bid_amount`  — chosen bid amount (number)
+- `bid_period`  — chosen delivery period in days (integer)
+
+## Output
+A single plain-text string. No markdown, no preamble, no sign-off.
+Return only the proposal text exactly as it should appear in the
+Freelancer bid field.
+
+Or the literal string `INSUFFICIENT_BRIEF` if the brief is too thin
+to personalize — the caller will skip this project.
+
+---
+
+## Structure — 5 elements, in this order (per Google Doc)
+
+### 1. Similar Experience
+Mention IBR Infotech's directly relevant experience for THIS
+project's stack. Tie it to a concrete detail from
+`P_full.preview_description` or `P_full.description`. Claim only
+service-area expertise listed at https://www.ibrinfotech.com —
+React, Node.js, MERN, AI Agents, React Native, etc.
+
+Do NOT invent client names, revenue figures, headcount, or specific
+past projects.
+
+- Bad: "We have built 200+ apps for Fortune 500 clients."
+- Good: "We ship multi-warehouse MERN admin dashboards like the one
+  you're describing routinely."
+
+### 2. Approach
+Explain HOW you will build it. Briefly. Concrete only — no filler
+like "using best practices" or "following industry standards".
+
+### 3. Technologies
+Name the specific technologies that match the project. Match what
+the brief mentions; don't oversell unrelated stacks.
+
+Blocks 2 and 3 may be combined into one paragraph or kept separate
+— both work, as long as both the approach and the specific tech are
+clearly present.
+
+### 4. Smart Question
+Ask ONE specific clarifying question about the brief. It must be:
+- Specific to THIS project (not generic like "what's your budget?")
+- Answerable in one sentence
+- A real ambiguity, not a token question
+
+### 5. Professional Close
+Close politely with ONE concrete next step:
+- "Happy to walk through the data model on a quick call."
+- "Can share a similar build on chat if useful."
+- "Ready to start as soon as you confirm — let me know."
+
+Then on a new line, exactly:
+Bid: {P_full.currency.sign}{bid_amount}, delivery in {bid_period} days.
+
+---
+
+## Length & Tone (per Google Doc section 8)
+
+- **Target: 100–180 words.** Reject your own draft if it is under
+  80 words (too thin) or over 200 words (too long).
+- **Always:** short, direct, confident, personalized.
+- **Avoid:** long proposals, generic copy-paste messages,
+  unnecessary technical jargon, any reference to "low pricing".
+- No exclamation marks, no emoji, no ALL-CAPS words.
+
+---
+
+## Hard Rules
+
+- Plain text only. No markdown headers in the output. Bullets only
+  as `-` or `•`.
+- **Personalize every proposal.** At least one noun phrase in
+  block 1 or block 2 must come from `P_full.preview_description`
+  or `P_full.description`.
+- Do not promise anything outside the brief — no bonus modules, no
+  free maintenance, no extras.
+- Do not include URLs, phone numbers, email addresses, or any
+  contact info — Freelancer auto-blocks bids containing them.
+- Do not include sign-offs ("Best regards", "Thanks", "Sincerely")
+  — Freelancer shows the bidder name automatically.
+- Do not negotiate price in the description. `bid_amount` is the
+  bid; the description sells the work, not the rate.
+- Do not discuss milestone splits — `milestone_percentage` handles
+  that on `place_bid`.
+- Do not frame the bid as "low", "cheap", or "best rate" —
+  manager rule.
+
+---
+
+## Forbidden Phrases
+
+Never use any of these, even once:
+- "Hi there"
+- "Dear Sir / Dear Madam"
+- "Greetings of the day"
+- "I have read your project carefully"
+- "I am very interested in your project"
+- "Looking forward to hearing from you"
+- "Kindly let me know"
+- "I am the right freelancer for this job"
+- "Best regards", "Thanks and regards", "Sincerely", any sign-off
+- "Cheapest", "lowest price", "best rate", "very affordable" —
+  anything implying low pricing
+
+---
+
+## When to return `INSUFFICIENT_BRIEF`
+
+Return the literal string `INSUFFICIENT_BRIEF` (no other text) if:
+- Brief is shorter than 100 characters or has no actionable detail.
+- Brief is in a language the agent cannot confidently serve.
+- Brief is a generic job-posting template with no real project
+  description.
+- No concrete noun phrase exists in `P_full.preview_description`
+  or `P_full.description` to personalize against.
+
+The caller will then skip this project entirely.
+
+---
+
+## Example Output (≈ 145 words)
+
+**Brief excerpt:** "Looking for a developer to build a MERN stack
+admin dashboard for a SaaS inventory tool. Features: JWT auth,
+role-based access (admin/manager/staff), real-time stock updates
+via WebSockets, CSV export, multi-warehouse support."
+
+**Output:**
+
+> At IBR Infotech we ship multi-warehouse MERN admin dashboards
+> with role-based access and live stock updates routinely — your
+> inventory tool sits squarely in that wheelhouse.
+>
+> The plan is a React + Tailwind admin shell talking to a Node +
+> Express API, MongoDB for stock projections, and Socket.io
+> channels scoped per warehouse so floor staff see only their own
+> site. JWT handles the three-role access (admin/manager/staff),
+> and CSV export is streamed server-side to keep large catalogs
+> from OOM-ing.
+>
+> One thing worth confirming early — should managers see a
+> cross-warehouse rollup view, or is the scoping strictly
+> per-site even at the manager tier?
+>
+> Happy to walk through the data model on a quick call before
+> you award.
+>
+> Bid: $450, delivery in 15 days.

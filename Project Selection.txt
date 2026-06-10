@@ -1,0 +1,122 @@
+# Project Eligibility
+
+## Purpose
+Decide whether a Freelancer project is worth bidding on. Called by
+the **Freelancer Bidding (Core + Search)** skill at STEP 5c, AFTER
+`get_project_details` has returned successfully. Returns a decision
+plus a short reason string used both for the skip path and for the
+sheet's Proposal column.
+
+## Input (provided in caller's context)
+- `P_full` — full project record from `get_project_details`
+- `bids_remaining` — cached from `get_bid_balance`
+
+## Output
+An object:
+
+```
+{ "eligible": true,  "reason": "ok" }
+```
+
+or
+
+```
+{ "eligible": false, "reason": "<short_snake_case_label>" }
+```
+
+The `reason` string is written verbatim into the sheet's `Proposal`
+column on a skip, so it must be short, lowercase, and free of
+punctuation other than `:` followed by a message tail. Use only
+labels from the fixed list below — never invent new ones.
+
+---
+
+## Eligibility checks
+
+Run in order. The FIRST failing check determines the reason. If
+all pass, return `{ eligible: true, reason: "ok" }`.
+
+### 1. Bids remaining
+- If `bids_remaining` is not greater than 0 →
+  return `{ eligible: false, reason: "no_bids_remaining" }`
+
+### 2. Project status
+- If `P_full.status != "active"` →
+  return `{ eligible: false, reason: "not_active" }`
+
+### 3. Budget present
+- If `P_full.budget` is missing or `P_full.budget.minimum` is
+  `null` →
+  return `{ eligible: false, reason: "budget_missing" }`
+
+### 4. Budget floor (manager rule: $200+)
+- If `P_full.budget.minimum < 200` (USD-equivalent floor) →
+  return `{ eligible: false, reason: "budget_below_floor" }`
+
+### 5. Competition (manager rule: target <15 bids)
+- If `P_full.bid_stats` exists, `bid_stats.bid_count` is a number,
+  and `bid_count >= 15` →
+  return `{ eligible: false, reason: "high_competition" }`
+
+### 6. Language
+- If the brief language (detected from `P_full.description` or
+  `P_full.preview_description`) is NOT English →
+  return `{ eligible: false, reason: "language_not_supported" }`
+
+### 7. Scope match
+- If the brief is clearly outside the cron's stated skill scope
+  (React, Node.js, MERN, AI Agents — the IBR Infotech focus) →
+  return `{ eligible: false, reason: "out_of_scope" }`
+- Be **conservative** here — only skip when the brief is
+  unambiguously in a different stack (e.g. pure Salesforce admin,
+  hardware PCB design, video editing, accounting). When the brief
+  is web/AI adjacent, pass it through.
+
+If all seven checks pass:
+return `{ eligible: true, reason: "ok" }`.
+
+---
+
+## Hard rules
+
+- Run checks in the order above. Stop at the first failure and
+  return immediately.
+- `reason` strings MUST come from the fixed list:
+  - `ok`
+  - `no_bids_remaining`
+  - `not_active`
+  - `budget_missing`
+  - `budget_below_floor`
+  - `high_competition`
+  - `language_not_supported`
+  - `out_of_scope`
+- Never invent new labels — the sheet and the caller rely on these
+  exact strings.
+- Do NOT make any tool calls. This skill is pure logic over the
+  input. No `get_project_details`, no `fetch_projects_with_filters`,
+  no `get_client_info`, no `get_bid_balance`.
+- Do NOT advance the watermark, do NOT write to the sheet, do NOT
+  touch memory. The caller owns all of that.
+- Do NOT return prose. Return ONLY the object
+  `{ eligible, reason }`.
+
+---
+
+## Notes on checks that are NOT in this skill
+
+The Google Doc also recommends:
+- Payment Verified clients only
+- Check client's previous reviews
+- Posted within 1 hour
+
+These are NOT implemented because:
+- `owner_id` is scrubbed to `null` on Freelancer's marketplace
+  listings, so client identity and verification cannot be read
+  before bidding. These can only be checked POST-award via
+  `get_client_info`.
+- "Posted within 1 hour" is only meaningful if the cron runs every
+  ~15 minutes. The current daily cadence cannot honor that window.
+  If cadence changes, add this check between steps 5 and 6:
+  ```
+  now - P_full.submitdate < 3600  →  "stale_posting"
+  ```
