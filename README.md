@@ -233,8 +233,8 @@ curl http://localhost:4000/api/v1/admin/servers \
      -H "x-api-key: $ADMIN_KEY"
 ```
 
-Swagger UI: `http://localhost:4000/docs`
-Admin UI:   `http://localhost:4000/admin`
+Swagger UI: `http://localhost:4000/docs` - Here you will get the documentation
+Admin UI:   `http://localhost:4000/admin` - Here you will get admin
 
 ---
 
