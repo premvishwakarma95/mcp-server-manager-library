@@ -4,6 +4,7 @@ A production-grade Node.js / Express / MongoDB platform that lets you create
 **MCP (Model Context Protocol) servers and tools dynamically at runtime** from
 database configuration — no hardcoded servers, no hardcoded tools, no code
 deploys required to add a new MCP endpoint.
+We don't need to create separate mcp for any third party and no need to write code for that it's a library that gives control to create just by admin panel.
 
 > Create a server in the admin API. Add tools (each tool is a stored config:
 > method, URL, JSON-Schema input, auth, timeout). The platform immediately
